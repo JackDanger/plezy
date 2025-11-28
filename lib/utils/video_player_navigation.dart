@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
 import '../models/plex_metadata.dart';
 import '../screens/video_player_screen.dart';
+import '../screens/audio_player_screen.dart';
 import '../services/settings_service.dart';
 
 /// Navigates to the VideoPlayerScreen with instant transitions to prevent white flash.
@@ -59,6 +60,43 @@ Future<bool?> navigateToVideoPlayer(
       preferredSubtitleTrack: preferredSubtitleTrack,
       preferredPlaybackRate: preferredPlaybackRate,
       selectedMediaIndex: mediaIndex,
+    ),
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
+
+  if (usePushReplacement) {
+    return navigator.pushReplacement<bool, bool>(route);
+  } else {
+    return navigator.push<bool>(route);
+  }
+}
+
+/// Navigates to the AudioPlayerScreen with instant transitions to prevent white flash.
+///
+/// This utility function provides a consistent way to navigate to the audio player
+/// across the app, using PageRouteBuilder with zero-duration transitions to eliminate
+/// the white flash that occurs with MaterialPageRoute.
+///
+/// Parameters:
+/// - [context]: The build context for navigation
+/// - [metadata]: The Plex metadata for the track to play
+/// - [usePushReplacement]: If true, replaces current route instead of pushing;
+///   useful for track-to-track navigation. Defaults to false.
+///
+/// Returns a Future that completes with a boolean indicating whether the content
+/// was played, or null if navigation was cancelled.
+Future<bool?> navigateToAudioPlayer(
+  BuildContext context, {
+  required PlexMetadata metadata,
+  bool usePushReplacement = false,
+}) async {
+  // Extract navigator before any async operations
+  final navigator = Navigator.of(context);
+
+  final route = PageRouteBuilder<bool>(
+    pageBuilder: (context, animation, secondaryAnimation) => AudioPlayerScreen(
+      metadata: metadata,
     ),
     transitionDuration: Duration.zero,
     reverseTransitionDuration: Duration.zero,

@@ -387,6 +387,9 @@
       "shows": "Serie TV",
       "seasons": "Stagioni",
       "episodes": "Episodi",
+      "artists": "Artisti",
+      "albums": "Album",
+      "tracks": "Brani",
       "folders": "Cartelle"
     }
   },

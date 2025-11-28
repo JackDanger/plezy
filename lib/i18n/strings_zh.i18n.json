@@ -387,6 +387,9 @@
       "shows": "剧集",
       "seasons": "季",
       "episodes": "集",
+      "artists": "艺术家",
+      "albums": "专辑",
+      "tracks": "曲目",
       "folders": "文件夹"
     }
   },

@@ -38,5 +38,21 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
+    
+    # Fix warning: exclude PrivacyInfo.xcprivacy files from compilation
+    target.build_configurations.each do |config|
+      config.build_settings['EXCLUDED_SOURCE_FILE_NAMES'] ||= []
+      config.build_settings['EXCLUDED_SOURCE_FILE_NAMES'] << '**/PrivacyInfo.xcprivacy'
+    end
+    
+    # Remove PrivacyInfo.xcprivacy from compile sources if present
+    # Only process targets that have a source_build_phase (skip aggregate targets)
+    if target.respond_to?(:source_build_phase) && target.source_build_phase
+      target.source_build_phase.files.each do |file|
+        if file.file_ref&.path&.end_with?('PrivacyInfo.xcprivacy')
+          file.remove_from_project
+        end
+      end
+    end
   end
 end

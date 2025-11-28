@@ -572,13 +572,7 @@ class PlexClient {
       '/library/recentlyAdded',
       queryParameters: {'X-Plex-Container-Size': limit, 'includeGuids': 1},
     );
-    final allItems = _extractMetadataList(response);
-
-    // Filter out music content (artists, albums, tracks)
-    return allItems.where((item) {
-      final type = item.type.toLowerCase();
-      return type != 'artist' && type != 'album' && type != 'track';
-    }).toList();
+    return _extractMetadataList(response);
   }
 
   /// Get on deck items (continue watching, filtered to video content only)
@@ -594,11 +588,7 @@ class PlexClient {
           )
           .toList();
 
-      // Filter out music content (artists, albums, tracks)
-      return allItems.where((item) {
-        final type = item.type.toLowerCase();
-        return type != 'artist' && type != 'album' && type != 'track';
-      }).toList();
+      return allItems;
     }
     return [];
   }

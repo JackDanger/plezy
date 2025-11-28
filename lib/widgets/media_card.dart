@@ -12,13 +12,15 @@ import '../providers/multi_server_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/settings_service.dart';
 import '../utils/provider_extensions.dart';
-import '../utils/video_player_navigation.dart';
+import '../utils/video_player_navigation.dart' show navigateToVideoPlayer, navigateToAudioPlayer;
 import '../utils/content_rating_formatter.dart';
 import '../utils/duration_formatter.dart';
 import '../screens/media_detail_screen.dart';
 import '../screens/season_detail_screen.dart';
 import '../screens/playlist_detail_screen.dart';
 import '../screens/collection_detail_screen.dart';
+import '../screens/artist_detail_screen.dart';
+import '../screens/album_detail_screen.dart';
 import '../theme/theme_helper.dart';
 import '../i18n/strings.g.dart';
 import 'media_context_menu.dart';
@@ -147,15 +149,32 @@ class _MediaCardState extends State<MediaCard> {
       return;
     }
 
-    // Music content is not yet supported
-    if (itemType == 'artist' || itemType == 'album' || itemType == 'track') {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(t.messages.musicNotSupported),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+    // Handle music content
+    if (itemType == 'artist') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ArtistDetailScreen(artist: widget.item),
+        ),
+      );
+      return;
+    } else if (itemType == 'album') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AlbumDetailScreen(album: widget.item),
+        ),
+      );
+      return;
+    } else if (itemType == 'track') {
+      // For tracks, start audio playback directly
+      final result = await navigateToAudioPlayer(
+        context,
+        metadata: widget.item,
+      );
+      // Refresh parent screen if result indicates it's needed
+      if (result == true) {
+        widget.onRefresh?.call(widget.item.ratingKey);
       }
       return;
     }

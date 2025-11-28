@@ -387,6 +387,9 @@
       "shows": "Serien",
       "seasons": "Staffeln",
       "episodes": "Episoden",
+      "artists": "Künstler",
+      "albums": "Alben",
+      "tracks": "Titel",
       "folders": "Ordner"
     }
   },

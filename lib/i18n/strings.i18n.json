@@ -385,6 +385,9 @@
       "shows": "TV Shows",
       "seasons": "Seasons",
       "episodes": "Episodes",
+      "artists": "Artists",
+      "albums": "Albums",
+      "tracks": "Tracks",
       "folders": "Folders"
     }
   },

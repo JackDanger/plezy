@@ -387,6 +387,9 @@
       "shows": "Serier",
       "seasons": "Säsonger",
       "episodes": "Avsnitt",
+      "artists": "Artister",
+      "albums": "Album",
+      "tracks": "Låtar",
       "folders": "Mappar"
     }
   },
