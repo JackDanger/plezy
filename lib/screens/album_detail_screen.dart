@@ -143,10 +143,6 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(_fullMetadata?.title ?? widget.album.title),
-        leading: AppBarBackButton(),
-      ),
       body: _isLoadingMetadata
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -158,6 +154,13 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
               },
               child: CustomScrollView(
                 slivers: [
+                  DesktopSliverAppBar(
+                    pinned: true,
+                    leading: AppBarBackButton(
+                      style: BackButtonStyle.circular,
+                    ),
+                    title: Text(_fullMetadata?.title ?? widget.album.title),
+                  ),
                   // Album header
                   SliverToBoxAdapter(
                     child: Padding(

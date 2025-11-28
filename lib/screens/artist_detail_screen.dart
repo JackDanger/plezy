@@ -8,13 +8,13 @@ import '../utils/keyboard_utils.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/duration_formatter.dart';
 import '../widgets/desktop_app_bar.dart';
+import '../widgets/app_bar_back_button.dart';
 import '../widgets/media_context_menu.dart';
 import '../mixins/item_updatable.dart';
 import '../mixins/keyboard_long_press_mixin.dart';
 import '../theme/theme_helper.dart' show tokens;
 import '../i18n/strings.g.dart';
 import '../widgets/media_card.dart';
-import '../widgets/app_bar_back_button.dart';
 import 'album_detail_screen.dart';
 
 class ArtistDetailScreen extends StatefulWidget {
@@ -139,10 +139,6 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(_fullMetadata?.title ?? widget.artist.title),
-        leading: AppBarBackButton(),
-      ),
       body: _isLoadingMetadata
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -154,6 +150,13 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
               },
               child: CustomScrollView(
                 slivers: [
+                  DesktopSliverAppBar(
+                    pinned: true,
+                    leading: AppBarBackButton(
+                      style: BackButtonStyle.circular,
+                    ),
+                    title: Text(_fullMetadata?.title ?? widget.artist.title),
+                  ),
                   // Artist header
                   SliverToBoxAdapter(
                     child: Padding(
