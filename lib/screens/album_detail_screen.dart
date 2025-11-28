@@ -143,16 +143,25 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: _isLoadingMetadata
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () async {
-                await Future.wait([
-                  _loadFullMetadata(),
-                  _loadTracks(),
-                ]);
-              },
-              child: CustomScrollView(
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (isBackKeyEvent(event)) {
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: _isLoadingMetadata
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: () async {
+                  await Future.wait([
+                    _loadFullMetadata(),
+                    _loadTracks(),
+                  ]);
+                },
+                child: CustomScrollView(
                 slivers: [
                   DesktopSliverAppBar(
                     pinned: true,
@@ -297,6 +306,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                 ],
               ),
             ),
+      ),
     );
   }
 }
