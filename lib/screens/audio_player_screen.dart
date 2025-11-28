@@ -123,11 +123,18 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
       final bufferSizeBytes = bufferSizeMB * 1024 * 1024;
       final debugLoggingEnabled = settingsService.getEnableDebugLogging();
 
+      // Build MPV configuration for audio-only playback
+      // Disable video output to prevent video rendering initialization
+      final config = <String, String>{
+        'vo': 'null', // Disable video output for audio-only playback
+      };
+
       // Create player with configuration
       player = Player(
         configuration: PlayerConfiguration(
           bufferSize: bufferSizeBytes,
           logLevel: debugLoggingEnabled ? MPVLogLevel.debug : MPVLogLevel.error,
+          mpvConfiguration: config,
         ),
       );
 
