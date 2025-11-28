@@ -4,9 +4,9 @@
 /// To regenerate, run: `dart run slang`
 ///
 /// Locales: 6
-/// Strings: 2680 (446 per locale)
+/// Strings: 2710 (451 per locale)
 ///
-/// Built on 2025-11-28 at 07:49 UTC
+/// Built on 2025-11-28 at 09:10 UTC
 
 // coverage:ignore-file
 // ignore_for_file: type=lint
@@ -246,6 +246,8 @@ class _StringsCommonEn {
 	String get delete => 'Delete';
 	String get shuffle => 'Shuffle';
 	String get addTo => 'Add to...';
+	String get more => 'More';
+	String get description => 'Description';
 }
 
 // Path: screens
@@ -917,6 +919,9 @@ class _StringsLibrariesGroupingsEn {
 	String get albums => 'Albums';
 	String get tracks => 'Tracks';
 	String get folders => 'Folders';
+	String get books => 'Books';
+	String get authors => 'Authors';
+	String get chapters => 'Chapters';
 }
 
 // Path: <root>
@@ -1037,6 +1042,8 @@ class _StringsCommonDe implements _StringsCommonEn {
 	@override String get delete => 'Löschen';
 	@override String get shuffle => 'Zufall';
 	@override String get addTo => 'Hinzufügen zu...';
+	@override String get more => 'Mehr';
+	@override String get description => 'Beschreibung';
 }
 
 // Path: screens
@@ -1710,6 +1717,9 @@ class _StringsLibrariesGroupingsDe implements _StringsLibrariesGroupingsEn {
 	@override String get albums => 'Alben';
 	@override String get tracks => 'Titel';
 	@override String get folders => 'Ordner';
+	@override String get books => 'Bücher';
+	@override String get authors => 'Autoren';
+	@override String get chapters => 'Kapitel';
 }
 
 // Path: <root>
@@ -1830,6 +1840,8 @@ class _StringsCommonIt implements _StringsCommonEn {
 	@override String get delete => 'Elimina';
 	@override String get shuffle => 'Casuale';
 	@override String get addTo => 'Aggiungi a...';
+	@override String get more => 'Altro';
+	@override String get description => 'Descrizione';
 }
 
 // Path: screens
@@ -2503,6 +2515,9 @@ class _StringsLibrariesGroupingsIt implements _StringsLibrariesGroupingsEn {
 	@override String get albums => 'Album';
 	@override String get tracks => 'Brani';
 	@override String get folders => 'Cartelle';
+	@override String get books => 'Libri';
+	@override String get authors => 'Autori';
+	@override String get chapters => 'Capitoli';
 }
 
 // Path: <root>
@@ -2623,6 +2638,8 @@ class _StringsCommonNl implements _StringsCommonEn {
 	@override String get delete => 'Verwijderen';
 	@override String get shuffle => 'Willekeurig';
 	@override String get addTo => 'Toevoegen aan...';
+	@override String get more => 'Meer';
+	@override String get description => 'Beschrijving';
 }
 
 // Path: screens
@@ -3296,6 +3313,9 @@ class _StringsLibrariesGroupingsNl implements _StringsLibrariesGroupingsEn {
 	@override String get albums => 'Albums';
 	@override String get tracks => 'Nummers';
 	@override String get folders => 'Mappen';
+	@override String get books => 'Boeken';
+	@override String get authors => 'Auteurs';
+	@override String get chapters => 'Hoofdstukken';
 }
 
 // Path: <root>
@@ -3416,6 +3436,8 @@ class _StringsCommonSv implements _StringsCommonEn {
 	@override String get delete => 'Ta bort';
 	@override String get shuffle => 'Blanda';
 	@override String get addTo => 'Lägg till i...';
+	@override String get more => 'Mer';
+	@override String get description => 'Beskrivning';
 }
 
 // Path: screens
@@ -4089,6 +4111,9 @@ class _StringsLibrariesGroupingsSv implements _StringsLibrariesGroupingsEn {
 	@override String get albums => 'Album';
 	@override String get tracks => 'Låtar';
 	@override String get folders => 'Mappar';
+	@override String get books => 'Böcker';
+	@override String get authors => 'Författare';
+	@override String get chapters => 'Kapitel';
 }
 
 // Path: <root>
@@ -4209,6 +4234,8 @@ class _StringsCommonZh implements _StringsCommonEn {
 	@override String get delete => '删除';
 	@override String get shuffle => '随机播放';
 	@override String get addTo => '添加到...';
+	@override String get more => '更多';
+	@override String get description => '描述';
 }
 
 // Path: screens
@@ -4882,6 +4909,9 @@ class _StringsLibrariesGroupingsZh implements _StringsLibrariesGroupingsEn {
 	@override String get albums => '专辑';
 	@override String get tracks => '曲目';
 	@override String get folders => '文件夹';
+	@override String get books => '书籍';
+	@override String get authors => '作者';
+	@override String get chapters => '章节';
 }
 
 /// Flat map(s) containing all translations.
@@ -4927,6 +4957,8 @@ extension on Translations {
 			case 'common.delete': return 'Delete';
 			case 'common.shuffle': return 'Shuffle';
 			case 'common.addTo': return 'Add to...';
+			case 'common.more': return 'More';
+			case 'common.description': return 'Description';
 			case 'screens.licenses': return 'Licenses';
 			case 'screens.switchProfile': return 'Switch Profile';
 			case 'screens.subtitleStyling': return 'Subtitle Styling';
@@ -5234,6 +5266,9 @@ extension on Translations {
 			case 'libraries.groupings.albums': return 'Albums';
 			case 'libraries.groupings.tracks': return 'Tracks';
 			case 'libraries.groupings.folders': return 'Folders';
+			case 'libraries.groupings.books': return 'Books';
+			case 'libraries.groupings.authors': return 'Authors';
+			case 'libraries.groupings.chapters': return 'Chapters';
 			case 'about.title': return 'About';
 			case 'about.openSourceLicenses': return 'Open Source Licenses';
 			case 'about.versionLabel': return ({required Object version}) => 'Version ${version}';
@@ -5380,6 +5415,8 @@ extension on _StringsDe {
 			case 'common.delete': return 'Löschen';
 			case 'common.shuffle': return 'Zufall';
 			case 'common.addTo': return 'Hinzufügen zu...';
+			case 'common.more': return 'Mehr';
+			case 'common.description': return 'Beschreibung';
 			case 'screens.licenses': return 'Lizenzen';
 			case 'screens.selectServer': return 'Server auswählen';
 			case 'screens.switchProfile': return 'Profil wechseln';
@@ -5689,6 +5726,9 @@ extension on _StringsDe {
 			case 'libraries.groupings.albums': return 'Alben';
 			case 'libraries.groupings.tracks': return 'Titel';
 			case 'libraries.groupings.folders': return 'Ordner';
+			case 'libraries.groupings.books': return 'Bücher';
+			case 'libraries.groupings.authors': return 'Autoren';
+			case 'libraries.groupings.chapters': return 'Kapitel';
 			case 'about.title': return 'Über';
 			case 'about.openSourceLicenses': return 'Open-Source-Lizenzen';
 			case 'about.versionLabel': return ({required Object version}) => 'Version ${version}';
@@ -5835,6 +5875,8 @@ extension on _StringsIt {
 			case 'common.delete': return 'Elimina';
 			case 'common.shuffle': return 'Casuale';
 			case 'common.addTo': return 'Aggiungi a...';
+			case 'common.more': return 'Altro';
+			case 'common.description': return 'Descrizione';
 			case 'screens.licenses': return 'Licenze';
 			case 'screens.selectServer': return 'Seleziona server';
 			case 'screens.switchProfile': return 'Cambia profilo';
@@ -6144,6 +6186,9 @@ extension on _StringsIt {
 			case 'libraries.groupings.albums': return 'Album';
 			case 'libraries.groupings.tracks': return 'Brani';
 			case 'libraries.groupings.folders': return 'Cartelle';
+			case 'libraries.groupings.books': return 'Libri';
+			case 'libraries.groupings.authors': return 'Autori';
+			case 'libraries.groupings.chapters': return 'Capitoli';
 			case 'about.title': return 'Informazioni';
 			case 'about.openSourceLicenses': return 'Licenze Open Source';
 			case 'about.versionLabel': return ({required Object version}) => 'Versione ${version}';
@@ -6290,6 +6335,8 @@ extension on _StringsNl {
 			case 'common.delete': return 'Verwijderen';
 			case 'common.shuffle': return 'Willekeurig';
 			case 'common.addTo': return 'Toevoegen aan...';
+			case 'common.more': return 'Meer';
+			case 'common.description': return 'Beschrijving';
 			case 'screens.licenses': return 'Licenties';
 			case 'screens.selectServer': return 'Selecteer server';
 			case 'screens.switchProfile': return 'Wissel van profiel';
@@ -6599,6 +6646,9 @@ extension on _StringsNl {
 			case 'libraries.groupings.albums': return 'Albums';
 			case 'libraries.groupings.tracks': return 'Nummers';
 			case 'libraries.groupings.folders': return 'Mappen';
+			case 'libraries.groupings.books': return 'Boeken';
+			case 'libraries.groupings.authors': return 'Auteurs';
+			case 'libraries.groupings.chapters': return 'Hoofdstukken';
 			case 'about.title': return 'Over';
 			case 'about.openSourceLicenses': return 'Open Source licenties';
 			case 'about.versionLabel': return ({required Object version}) => 'Versie ${version}';
@@ -6745,6 +6795,8 @@ extension on _StringsSv {
 			case 'common.delete': return 'Ta bort';
 			case 'common.shuffle': return 'Blanda';
 			case 'common.addTo': return 'Lägg till i...';
+			case 'common.more': return 'Mer';
+			case 'common.description': return 'Beskrivning';
 			case 'screens.licenses': return 'Licenser';
 			case 'screens.selectServer': return 'Välj server';
 			case 'screens.switchProfile': return 'Byt profil';
@@ -7054,6 +7106,9 @@ extension on _StringsSv {
 			case 'libraries.groupings.albums': return 'Album';
 			case 'libraries.groupings.tracks': return 'Låtar';
 			case 'libraries.groupings.folders': return 'Mappar';
+			case 'libraries.groupings.books': return 'Böcker';
+			case 'libraries.groupings.authors': return 'Författare';
+			case 'libraries.groupings.chapters': return 'Kapitel';
 			case 'about.title': return 'Om';
 			case 'about.openSourceLicenses': return 'Öppen källkod-licenser';
 			case 'about.versionLabel': return ({required Object version}) => 'Version ${version}';
@@ -7200,6 +7255,8 @@ extension on _StringsZh {
 			case 'common.delete': return '删除';
 			case 'common.shuffle': return '随机播放';
 			case 'common.addTo': return '添加到...';
+			case 'common.more': return '更多';
+			case 'common.description': return '描述';
 			case 'screens.licenses': return '许可证';
 			case 'screens.selectServer': return '选择服务器';
 			case 'screens.switchProfile': return '切换配置文件';
@@ -7509,6 +7566,9 @@ extension on _StringsZh {
 			case 'libraries.groupings.albums': return '专辑';
 			case 'libraries.groupings.tracks': return '曲目';
 			case 'libraries.groupings.folders': return '文件夹';
+			case 'libraries.groupings.books': return '书籍';
+			case 'libraries.groupings.authors': return '作者';
+			case 'libraries.groupings.chapters': return '章节';
 			case 'about.title': return '关于';
 			case 'about.openSourceLicenses': return '开源许可证';
 			case 'about.versionLabel': return ({required Object version}) => '版本 ${version}';

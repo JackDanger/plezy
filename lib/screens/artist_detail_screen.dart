@@ -4,12 +4,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../client/plex_client.dart';
 import '../widgets/focus/focus_indicator.dart';
 import '../models/plex_metadata.dart';
+import '../models/plex_library.dart';
 import '../utils/keyboard_utils.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/duration_formatter.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/app_bar_back_button.dart';
 import '../widgets/media_context_menu.dart';
+import '../widgets/expandable_text.dart';
 import '../mixins/item_updatable.dart';
 import '../mixins/keyboard_long_press_mixin.dart';
 import '../theme/theme_helper.dart' show tokens;
@@ -37,6 +39,7 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
   bool _isLoadingAlbums = false;
   PlexMetadata? _fullMetadata;
   bool _isLoadingMetadata = true;
+  PlexLibrary? _sourceLibrary; // Cache the library this artist belongs to
   final FocusNode _firstAlbumFocusNode = FocusNode(
     debugLabel: 'FirstAlbum',
   );
@@ -106,6 +109,9 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
       // Albums are automatically tagged with server info by PlexClient
       final albums = await _client.getChildren(widget.artist.ratingKey);
 
+      // Load source library for audiobook detection
+      await _loadSourceLibrary();
+
       setState(() {
         _albums = albums;
         _isLoadingAlbums = false;
@@ -130,6 +136,39 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
     if (index != -1) {
       _albums[index] = updatedMetadata;
     }
+  }
+
+  /// Load the source library for this artist if available.
+  Future<void> _loadSourceLibrary() async {
+    final metadata = _fullMetadata ?? widget.artist;
+    if (metadata.librarySectionID == null) return;
+
+    try {
+      final libraries = await _client.getLibraries();
+      try {
+        final library = libraries.firstWhere(
+          (lib) => lib.key == metadata.librarySectionID.toString(),
+        );
+        if (mounted) {
+          setState(() {
+            _sourceLibrary = library;
+          });
+        }
+      } catch (e) {
+        if (libraries.isNotEmpty && mounted) {
+          setState(() {
+            _sourceLibrary = libraries.first;
+          });
+        }
+      }
+    } catch (e) {
+      // Library lookup failed
+    }
+  }
+
+  /// Check if this artist is from an audiobook library
+  bool get _isAudiobook {
+    return _sourceLibrary?.isAudiobookLibrary ?? false;
   }
 
   @override
@@ -214,8 +253,9 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
                                 ),
                                 if (_fullMetadata?.summary != null) ...[
                                   const SizedBox(height: 8),
-                                  Text(
-                                    _fullMetadata!.summary!,
+                                  ExpandableText(
+                                    text: _fullMetadata!.summary!,
+                                    maxLines: 10,
                                     style: theme.textTheme.bodyMedium,
                                   ),
                                 ],
@@ -226,12 +266,14 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
                       ),
                     ),
                   ),
-                  // Albums section
+                  // Albums/Books section
                   SliverPadding(
                     padding: const EdgeInsets.all(16.0),
                     sliver: SliverToBoxAdapter(
                       child: Text(
-                        t.libraries.groupings.albums,
+                        _isAudiobook 
+                            ? t.libraries.groupings.books
+                            : t.libraries.groupings.albums,
                         style: theme.textTheme.titleLarge,
                       ),
                     ),

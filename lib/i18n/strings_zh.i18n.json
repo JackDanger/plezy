@@ -40,7 +40,9 @@
     "server": "服务器",
     "delete": "删除",
     "shuffle": "随机播放",
-    "addTo": "添加到..."
+    "addTo": "添加到...",
+    "more": "更多",
+    "description": "描述"
   },
   "screens": {
     "licenses": "许可证",
@@ -390,7 +392,10 @@
       "artists": "艺术家",
       "albums": "专辑",
       "tracks": "曲目",
-      "folders": "文件夹"
+      "folders": "文件夹",
+      "books": "书籍",
+      "authors": "作者",
+      "chapters": "章节"
     }
   },
   "about": {

@@ -40,7 +40,9 @@
     "server": "Server",
     "delete": "Ta bort",
     "shuffle": "Blanda",
-    "addTo": "Lägg till i..."
+    "addTo": "Lägg till i...",
+    "more": "Mer",
+    "description": "Beskrivning"
   },
   "screens": {
     "licenses": "Licenser",
@@ -390,7 +392,10 @@
       "artists": "Artister",
       "albums": "Album",
       "tracks": "Låtar",
-      "folders": "Mappar"
+      "folders": "Mappar",
+      "books": "Böcker",
+      "authors": "Författare",
+      "chapters": "Kapitel"
     }
   },
   "about": {

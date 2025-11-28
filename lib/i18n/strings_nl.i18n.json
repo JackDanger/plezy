@@ -40,7 +40,9 @@
     "server": "Server",
     "delete": "Verwijderen",
     "shuffle": "Willekeurig",
-    "addTo": "Toevoegen aan..."
+    "addTo": "Toevoegen aan...",
+    "more": "Meer",
+    "description": "Beschrijving"
   },
   "screens": {
     "licenses": "Licenties",
@@ -390,7 +392,10 @@
       "artists": "Artiesten",
       "albums": "Albums",
       "tracks": "Nummers",
-      "folders": "Mappen"
+      "folders": "Mappen",
+      "books": "Boeken",
+      "authors": "Auteurs",
+      "chapters": "Hoofdstukken"
     }
   },
   "about": {

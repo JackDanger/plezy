@@ -4,15 +4,16 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../client/plex_client.dart';
 import '../widgets/focus/focus_indicator.dart';
 import '../models/plex_metadata.dart';
+import '../models/plex_library.dart';
 import '../utils/keyboard_utils.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/duration_formatter.dart' show formatDurationTimestamp;
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/app_bar_back_button.dart';
 import '../widgets/media_context_menu.dart';
+import '../widgets/expandable_text.dart';
 import '../mixins/item_updatable.dart';
 import '../mixins/keyboard_long_press_mixin.dart';
-import '../theme/theme_helper.dart' show tokens;
 import '../i18n/strings.g.dart';
 import '../utils/video_player_navigation.dart' show navigateToAudioPlayer;
 
@@ -36,6 +37,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
   bool _isLoadingTracks = false;
   PlexMetadata? _fullMetadata;
   bool _isLoadingMetadata = true;
+  PlexLibrary? _sourceLibrary; // Cache the library this album belongs to
   final FocusNode _firstTrackFocusNode = FocusNode(
     debugLabel: 'FirstTrack',
   );
@@ -105,6 +107,9 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
       // Tracks are automatically tagged with server info by PlexClient
       final tracks = await _client.getChildren(widget.album.ratingKey);
 
+      // Load source library for audiobook detection
+      await _loadSourceLibrary();
+
       setState(() {
         _tracks = tracks;
         _isLoadingTracks = false;
@@ -133,6 +138,92 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
     final index = _tracks.indexWhere((item) => item.ratingKey == ratingKey);
     if (index != -1) {
       _tracks[index] = updatedMetadata;
+    }
+  }
+
+  /// Load the source library for this album if available.
+  /// This enables accurate audiobook detection based on library metadata.
+  Future<void> _loadSourceLibrary() async {
+    final metadata = _fullMetadata ?? widget.album;
+    if (metadata.librarySectionID == null) return;
+
+    try {
+      // Get libraries from the same server as this metadata
+      final libraries = await _client.getLibraries();
+      
+      // Find library matching the section ID (key matches librarySectionID)
+      try {
+        final library = libraries.firstWhere(
+          (lib) => lib.key == metadata.librarySectionID.toString(),
+        );
+        if (mounted) {
+          setState(() {
+            _sourceLibrary = library;
+          });
+        }
+      } catch (e) {
+        // Library not found by key, try to find any library from same server
+        if (libraries.isNotEmpty) {
+          if (mounted) {
+            setState(() {
+              _sourceLibrary = libraries.first;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Library lookup failed, will fall back to other detection methods
+    }
+  }
+
+  /// Check if this album is from an audiobook library
+  bool get _isAudiobook {
+    if (_sourceLibrary != null) {
+      return _sourceLibrary!.isAudiobookLibrary;
+    }
+    // Fallback: check if album has multiple tracks (typical for audiobooks)
+    // and if any track has a viewOffset (indicating playback has started)
+    return _tracks.length > 1 && 
+           _tracks.any((track) => track.viewOffset != null && track.viewOffset! > 0);
+  }
+
+  /// Find the track with the highest viewOffset (last played track)
+  PlexMetadata? _getResumeTrack() {
+    if (_tracks.isEmpty) return null;
+    
+    // Find track with highest viewOffset that's not completed
+    PlexMetadata? resumeTrack;
+    int maxViewOffset = 0;
+    
+    for (final track in _tracks) {
+      if (track.viewOffset != null && 
+          track.viewOffset! > maxViewOffset &&
+          track.viewOffset! < (track.duration ?? 0)) {
+        maxViewOffset = track.viewOffset!;
+        resumeTrack = track;
+      }
+    }
+    
+    return resumeTrack;
+  }
+
+  /// Resume playback from the last position
+  Future<void> _resumePlayback() async {
+    final resumeTrack = _getResumeTrack();
+    if (resumeTrack != null) {
+      await navigateToAudioPlayer(
+        context,
+        metadata: resumeTrack,
+      );
+      // Refresh tracks when returning from audio player
+      _loadTracks();
+    } else if (_tracks.isNotEmpty) {
+      // No resume position, start from first track
+      await navigateToAudioPlayer(
+        context,
+        metadata: _tracks.first,
+      );
+      _loadTracks();
     }
   }
 
@@ -236,8 +327,9 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                                 ],
                                 if (_fullMetadata?.summary != null) ...[
                                   const SizedBox(height: 8),
-                                  Text(
-                                    _fullMetadata!.summary!,
+                                  ExpandableText(
+                                    text: _fullMetadata!.summary!,
+                                    maxLines: 10,
                                     style: theme.textTheme.bodyMedium,
                                   ),
                                 ],
@@ -248,12 +340,22 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                       ),
                     ),
                   ),
-                  // Tracks section
+                  // Play button for audiobooks (show prominently if multiple tracks)
+                  if (_isAudiobook && _tracks.length > 1 && !_isLoadingTracks)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: _buildResumeButton(theme),
+                      ),
+                    ),
+                  // Tracks/Chapters section
                   SliverPadding(
                     padding: const EdgeInsets.all(16.0),
                     sliver: SliverToBoxAdapter(
                       child: Text(
-                        t.libraries.groupings.tracks,
+                        _isAudiobook
+                            ? t.libraries.groupings.chapters
+                            : t.libraries.groupings.tracks,
                         style: theme.textTheme.titleLarge,
                       ),
                     ),
@@ -306,6 +408,78 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                 ],
               ),
             ),
+      ),
+    );
+  }
+
+  /// Build the resume play button for audiobooks
+  Widget _buildResumeButton(ThemeData theme) {
+    final resumeTrack = _getResumeTrack();
+    final hasResumePosition = resumeTrack != null;
+    
+    // Calculate progress percentage if resuming
+    String? progressText;
+    if (hasResumePosition && resumeTrack.duration != null && resumeTrack.duration! > 0) {
+      final progress = (resumeTrack.viewOffset! / resumeTrack.duration!) * 100;
+      progressText = '${progress.toStringAsFixed(0)}% complete';
+    }
+    
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.primary.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _resumePlayback,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  hasResumePosition ? Icons.play_circle_filled : Icons.play_arrow,
+                  size: 32,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        hasResumePosition 
+                            ? 'Resume ${resumeTrack.title}'
+                            : 'Play Audiobook',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      if (progressText != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          progressText,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

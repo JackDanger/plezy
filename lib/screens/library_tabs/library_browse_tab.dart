@@ -292,6 +292,8 @@ class _LibraryBrowseTabState extends State<LibraryBrowseTab>
         return '9';
       case 'tracks':
         return '10';
+      case 'chapters':
+        return '10'; // Chapters use the same Plex type ID as tracks
       default:
         return '';
     }
@@ -299,6 +301,7 @@ class _LibraryBrowseTabState extends State<LibraryBrowseTab>
 
   List<String> _getGroupingOptions() {
     final type = widget.library.type.toLowerCase();
+    
     if (type == 'show') {
       return ['shows', 'seasons', 'episodes', 'folders'];
     } else if (type == 'movie') {
@@ -311,6 +314,25 @@ class _LibraryBrowseTabState extends State<LibraryBrowseTab>
   }
 
   String _getGroupingLabel(String grouping) {
+    final isAudiobook = widget.library.isAudiobookLibrary;
+    
+    // Use audiobook-specific labels when appropriate
+    if (isAudiobook) {
+      switch (grouping) {
+        case 'artists':
+          return t.libraries.groupings.authors;
+        case 'albums':
+          return t.libraries.groupings.books;
+        case 'tracks':
+          return t.libraries.groupings.chapters;
+        case 'folders':
+          return t.libraries.groupings.folders;
+        default:
+          return t.libraries.groupings.all;
+      }
+    }
+    
+    // Standard labels for non-audiobook libraries
     switch (grouping) {
       case 'movies':
         return t.libraries.groupings.movies;

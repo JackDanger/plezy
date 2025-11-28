@@ -40,7 +40,9 @@
     "server": "Server",
     "delete": "Delete",
     "shuffle": "Shuffle",
-    "addTo": "Add to..."
+    "addTo": "Add to...",
+    "more": "More",
+    "description": "Description"
   },
   "screens": {
     "licenses": "Licenses",
@@ -388,7 +390,10 @@
       "artists": "Artists",
       "albums": "Albums",
       "tracks": "Tracks",
-      "folders": "Folders"
+      "folders": "Folders",
+      "books": "Books",
+      "authors": "Authors",
+      "chapters": "Chapters"
     }
   },
   "about": {

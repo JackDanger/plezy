@@ -40,7 +40,9 @@
     "server": "Server",
     "delete": "Löschen",
     "shuffle": "Zufall",
-    "addTo": "Hinzufügen zu..."
+    "addTo": "Hinzufügen zu...",
+    "more": "Mehr",
+    "description": "Beschreibung"
   },
   "screens": {
     "licenses": "Lizenzen",
@@ -390,7 +392,10 @@
       "artists": "Künstler",
       "albums": "Alben",
       "tracks": "Titel",
-      "folders": "Ordner"
+      "folders": "Ordner",
+      "books": "Bücher",
+      "authors": "Autoren",
+      "chapters": "Kapitel"
     }
   },
   "about": {

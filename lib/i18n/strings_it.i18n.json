@@ -40,7 +40,9 @@
     "server": "Server",
     "delete": "Elimina",
     "shuffle": "Casuale",
-    "addTo": "Aggiungi a..."
+    "addTo": "Aggiungi a...",
+    "more": "Altro",
+    "description": "Descrizione"
   },
   "screens": {
     "licenses": "Licenze",
@@ -390,7 +392,10 @@
       "artists": "Artisti",
       "albums": "Album",
       "tracks": "Brani",
-      "folders": "Cartelle"
+      "folders": "Cartelle",
+      "books": "Libri",
+      "authors": "Autori",
+      "chapters": "Capitoli"
     }
   },
   "about": {
