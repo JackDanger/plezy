@@ -16,9 +16,7 @@ import '../utils/app_logger.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/duration_formatter.dart' show formatDurationTimestamp;
 import '../widgets/desktop_app_bar.dart';
-import '../widgets/app_bar_back_button.dart';
-import '../theme/theme_helper.dart' show tokens;
-import '../i18n/strings.g.dart';
+import '../utils/keyboard_utils.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final PlexMetadata metadata;
@@ -305,166 +303,218 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(_fullMetadata?.title ?? widget.metadata.title),
-        leading: AppBarBackButton(),
-      ),
-      body: _isPlayerInitialized && !_isLoadingMetadata
-          ? Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Album art
-                    if (_fullMetadata?.thumb != null ||
-                        _fullMetadata?.art != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: CachedNetworkImage(
-                          imageUrl: client.getThumbnailUrl(
-                            _fullMetadata!.thumb ?? _fullMetadata!.art!,
-                          ),
-                          width: isDesktop ? 400 : 300,
-                          height: isDesktop ? 400 : 300,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            width: isDesktop ? 400 : 300,
-                            height: isDesktop ? 400 : 300,
-                            color: theme.cardColor,
-                            child: const Center(
-                              child: CircularProgressIndicator(),
+      body: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (isBackKeyEvent(event)) {
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: CustomScrollView(
+          slivers: [
+            CustomAppBar(
+              title: Text(_fullMetadata?.title ?? widget.metadata.title),
+              pinned: true,
+              onBackPressed: () => Navigator.pop(context),
+            ),
+            if (_isPlayerInitialized && !_isLoadingMetadata)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Album art
+                        if (_fullMetadata?.thumb != null ||
+                            _fullMetadata?.art != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: CachedNetworkImage(
+                              imageUrl: client.getThumbnailUrl(
+                                _fullMetadata!.thumb ?? _fullMetadata!.art!,
+                              ),
+                              width: isDesktop ? 400 : 300,
+                              height: isDesktop ? 400 : 300,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                width: isDesktop ? 400 : 300,
+                                height: isDesktop ? 400 : 300,
+                                color: theme.cardColor,
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                width: isDesktop ? 400 : 300,
+                                height: isDesktop ? 400 : 300,
+                                color: theme.cardColor,
+                                child: Icon(
+                                  Icons.music_note,
+                                  size: 100,
+                                  color: theme.disabledColor,
+                                ),
+                              ),
                             ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
+                          )
+                        else
+                          Container(
                             width: isDesktop ? 400 : 300,
                             height: isDesktop ? 400 : 300,
-                            color: theme.cardColor,
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             child: Icon(
                               Icons.music_note,
                               size: 100,
                               color: theme.disabledColor,
                             ),
                           ),
+                        const SizedBox(height: 32),
+                        // Track info
+                        Text(
+                          _fullMetadata?.title ?? widget.metadata.title,
+                          style: theme.textTheme.headlineMedium,
+                          textAlign: TextAlign.center,
                         ),
-                      )
-                    else
-                      Container(
-                        width: isDesktop ? 400 : 300,
-                        height: isDesktop ? 400 : 300,
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(
-                          Icons.music_note,
-                          size: 100,
-                          color: theme.disabledColor,
-                        ),
-                      ),
-                    const SizedBox(height: 32),
-                    // Track info
-                    Text(
-                      _fullMetadata?.title ?? widget.metadata.title,
-                      style: theme.textTheme.headlineMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    if (_fullMetadata?.parentTitle != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        _fullMetadata!.parentTitle!,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.disabledColor,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                    const SizedBox(height: 32),
-                    // Progress bar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        children: [
-                          Slider(
-                            value: _duration.inMilliseconds > 0
-                                ? _position.inMilliseconds /
-                                    _duration.inMilliseconds
-                                : 0.0,
-                            onChanged: (value) {
-                              final newPosition = Duration(
-                                milliseconds: (value *
-                                        _duration.inMilliseconds)
-                                    .round(),
-                              );
-                              player?.seek(newPosition);
-                            },
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                formatDurationTimestamp(_position),
-                                style: theme.textTheme.bodySmall,
-                              ),
-                              Text(
-                                formatDurationTimestamp(_duration),
-                                style: theme.textTheme.bodySmall,
-                              ),
-                            ],
+                        if (_fullMetadata?.parentTitle != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            _fullMetadata!.parentTitle!,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.disabledColor,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    // Controls
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Volume down
-                        IconButton(
-                          icon: const Icon(Icons.volume_down),
-                          onPressed: () {
-                            final newVolume = (_volume - 10).clamp(0.0, 100.0);
-                            player?.setVolume(newVolume);
-                            setState(() {
-                              _volume = newVolume;
-                            });
-                          },
-                          iconSize: 32,
-                        ),
-                        const SizedBox(width: 16),
-                        // Play/Pause
-                        IconButton(
-                          icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
-                          onPressed: () {
-                            if (_isPlaying) {
-                              player?.pause();
-                            } else {
-                              player?.play();
-                            }
-                          },
-                          iconSize: 64,
-                        ),
-                        const SizedBox(width: 16),
-                        // Volume up
-                        IconButton(
-                          icon: const Icon(Icons.volume_up),
-                          onPressed: () {
-                            final newVolume = (_volume + 10).clamp(0.0, 100.0);
-                            player?.setVolume(newVolume);
-                            setState(() {
-                              _volume = newVolume;
-                            });
-                          },
-                          iconSize: 32,
+                        const SizedBox(height: 32),
+                        // Progress bar with StreamBuilder for real-time updates
+                        if (player != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: StreamBuilder<Duration>(
+                              stream: player!.stream.position,
+                              initialData: player!.state.position,
+                              builder: (context, positionSnapshot) {
+                                return StreamBuilder<Duration>(
+                                  stream: player!.stream.duration,
+                                  initialData: player!.state.duration,
+                                  builder: (context, durationSnapshot) {
+                                    final position =
+                                        positionSnapshot.data ?? Duration.zero;
+                                    final duration =
+                                        durationSnapshot.data ?? Duration.zero;
+
+                                    return Column(
+                                      children: [
+                                        Slider(
+                                          value: duration.inMilliseconds > 0
+                                              ? position.inMilliseconds /
+                                                  duration.inMilliseconds
+                                              : 0.0,
+                                          onChanged: (value) {
+                                            final newPosition = Duration(
+                                              milliseconds: (value *
+                                                      duration.inMilliseconds)
+                                                  .round(),
+                                            );
+                                            player?.seek(newPosition);
+                                          },
+                                        ),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              formatDurationTimestamp(position),
+                                              style: theme.textTheme.bodySmall,
+                                            ),
+                                            Text(
+                                              formatDurationTimestamp(duration),
+                                              style: theme.textTheme.bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          )
+                        else
+                          const SizedBox.shrink(),
+                        const SizedBox(height: 32),
+                        // Controls
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Volume down
+                            IconButton(
+                              icon: const Icon(Icons.volume_down),
+                              onPressed: () {
+                                final newVolume =
+                                    (_volume - 10).clamp(0.0, 100.0);
+                                player?.setVolume(newVolume);
+                                setState(() {
+                                  _volume = newVolume;
+                                });
+                              },
+                              iconSize: 32,
+                            ),
+                            const SizedBox(width: 16),
+                            // Play/Pause
+                            StreamBuilder<bool>(
+                              stream: player?.stream.playing,
+                              initialData: player?.state.playing ?? false,
+                              builder: (context, snapshot) {
+                                final isPlaying = snapshot.data ?? false;
+                                return IconButton(
+                                  icon: Icon(
+                                      isPlaying ? Icons.pause : Icons.play_arrow),
+                                  onPressed: () {
+                                    if (isPlaying) {
+                                      player?.pause();
+                                    } else {
+                                      player?.play();
+                                    }
+                                  },
+                                  iconSize: 64,
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 16),
+                            // Volume up
+                            IconButton(
+                              icon: const Icon(Icons.volume_up),
+                              onPressed: () {
+                                final newVolume =
+                                    (_volume + 10).clamp(0.0, 100.0);
+                                player?.setVolume(newVolume);
+                                setState(() {
+                                  _volume = newVolume;
+                                });
+                              },
+                              iconSize: 32,
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
+              )
+            else
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
               ),
-            )
-          : const Center(child: CircularProgressIndicator()),
+          ],
+        ),
+      ),
     );
   }
 }
