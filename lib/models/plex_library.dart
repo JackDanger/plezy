@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 import 'mixins/multi_server_fields.dart';
@@ -27,6 +28,64 @@ class PlexLibrary with MultiServerFields {
 
   /// Global unique identifier across all servers (serverId:key)
   String get globalKey => serverId != null ? '$serverId:$key' : key;
+
+  /// Determines if this library is an audiobook library.
+  ///
+  /// Audiobooks in Plex are stored as music libraries (type: "artist") but use
+  /// specific metadata agents like audnexus, audiobooks, or audiobookshelf.
+  /// They may also be identified by the library name containing "audiobooks".
+  ///
+  /// Returns true if:
+  /// - The library title contains "audiobooks" (case-insensitive) OR
+  /// - The library type is "artist" AND the agent contains "audnexus", "audiobook", or "audiobookshelf" (case-insensitive)
+  ///
+  /// Returns false if:
+  /// - The library type is not "artist" (unless title matches)
+  /// - The agent is null and title doesn't match
+  /// - The agent doesn't contain any audiobook-specific patterns and title doesn't match
+  bool get isAudiobookLibrary {
+    // Check library name first (most reliable indicator)
+    final titleLower = title.toLowerCase();
+    if (titleLower.contains('audiobooks')) {
+      return true;
+    }
+
+    // Check agent for artist-type libraries
+    // Audiobooks are stored as music libraries (type: "artist") but use
+    // specific metadata agents
+    if (type.toLowerCase() != 'artist') return false;
+
+    final agentLower = agent?.toLowerCase() ?? '';
+    // Check for specific audiobook agents (order matters - check most specific first)
+    if (agentLower.contains('audiobookshelf')) return true;
+    if (agentLower.contains('audnexus')) return true;
+    if (agentLower.contains('audiobook')) return true; // This will also catch "audiobooks" agent
+    
+    return false;
+  }
+
+  /// Returns the appropriate icon for this library type.
+  ///
+  /// Uses Icons.headphones for audiobook libraries, and type-specific icons
+  /// for other library types.
+  IconData get libraryIcon {
+    if (isAudiobookLibrary) {
+      return Icons.headphones;
+    }
+
+    switch (type.toLowerCase()) {
+      case 'movie':
+        return Icons.movie;
+      case 'show':
+        return Icons.tv;
+      case 'artist':
+        return Icons.music_note;
+      case 'photo':
+        return Icons.photo;
+      default:
+        return Icons.folder;
+    }
+  }
 
   PlexLibrary({
     required this.key,

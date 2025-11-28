@@ -854,7 +854,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
           child: Row(
             children: [
               Icon(
-                _getLibraryIcon(library.type),
+                library.libraryIcon,
                 size: 20,
                 color: isSelected
                     ? Theme.of(context).colorScheme.primary
@@ -917,7 +917,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
               children: [
                 const SizedBox(width: 12), // Indent library items
                 Icon(
-                  _getLibraryIcon(library.type),
+                  library.libraryIcon,
                   size: 20,
                   color: isSelected
                       ? Theme.of(context).colorScheme.primary
@@ -1072,7 +1072,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(_getLibraryIcon(selectedLibrary.type), size: 20),
+                  Icon(selectedLibrary.libraryIcon, size: 20),
                   const SizedBox(width: 8),
                   if (_hasMultipleServers && selectedLibrary.serverName != null)
                     Column(
@@ -2115,7 +2115,7 @@ class _LibraryManagementSheetState extends State<_LibraryManagementSheet> {
                 ),
               if (enableDrag) const SizedBox(width: 8),
               if (!enableDrag) const SizedBox(width: 12),
-              Icon(_getLibraryIcon(library.type)),
+              Icon(library.libraryIcon),
             ],
           ),
           title: Row(
