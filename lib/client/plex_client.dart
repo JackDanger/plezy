@@ -503,7 +503,8 @@ class PlexClient {
   }
 
   /// Search across all libraries using the hub search endpoint
-  /// Only returns movies and shows, filtering out seasons and episodes
+  /// Returns movies, shows, and music (artists, albums, tracks)
+  /// Filters out seasons and episodes
   Future<List<PlexMetadata>> search(String query, {int limit = 10}) async {
     final response = await _dio.get(
       '/hubs/search',
@@ -519,16 +520,21 @@ class PlexClient {
     if (response.data is Map && response.data.containsKey('MediaContainer')) {
       final container = response.data['MediaContainer'];
       if (container['Hub'] != null) {
-        // Each hub contains results of a specific type (movies, shows, etc.)
+        // Each hub contains results of a specific type (movies, shows, music, etc.)
         for (final hub in container['Hub'] as List) {
           final hubType = hub['type'] as String?;
 
-          // Only include movie and show hubs
-          if (hubType != 'movie' && hubType != 'show') {
+          // Include movies, shows, and music (artists, albums, tracks)
+          // Filter out seasons and episodes
+          if (hubType != 'movie' &&
+              hubType != 'show' &&
+              hubType != 'artist' &&
+              hubType != 'album' &&
+              hubType != 'track') {
             continue;
           }
 
-          // Hubs can contain either Metadata (for movies) or Directory (for shows)
+          // Hubs can contain either Metadata (for movies, tracks) or Directory (for shows, artists, albums)
           if (hub['Metadata'] != null) {
             for (final json in hub['Metadata'] as List) {
               try {
