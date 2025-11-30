@@ -25,8 +25,25 @@ class MultiServerManager {
   /// Stream of server status changes
   Stream<Map<String, bool>> get statusStream => _statusController.stream;
 
+  /// Stream controller for when a server comes back online
+  /// Emits the serverId when a previously offline server successfully reconnects
+  final _serverCameOnlineController = StreamController<String>.broadcast();
+
+  /// Stream of server IDs that have come back online
+  /// Use this to trigger UI refreshes when new server data becomes available
+  Stream<String> get serverCameOnlineStream => _serverCameOnlineController.stream;
+
   /// Connectivity subscription for network monitoring
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
+  /// Timer for periodic retry of offline servers
+  Timer? _offlineRetryTimer;
+
+  /// Interval between retry attempts for offline servers
+  static const Duration _offlineRetryInterval = Duration(seconds: 30);
+
+  /// Whether an offline retry is currently in progress
+  bool _isRetryingOfflineServers = false;
 
   /// Map of serverId to active optimization futures
   final Map<String, Future<void>> _activeOptimizations = {};
@@ -192,6 +209,13 @@ class MultiServerManager {
       startNetworkMonitoring();
     }
 
+    // Start offline retry timer if any servers failed to connect
+    final failedCount = servers.length - successCount;
+    if (failedCount > 0) {
+      appLogger.i('$failedCount servers offline, starting retry timer');
+      startOfflineRetryTimer(clientIdentifier: clientIdentifier);
+    }
+
     return successCount;
   }
 
@@ -312,6 +336,142 @@ class MultiServerManager {
     await Future.wait(healthChecks);
   }
 
+  /// Retry connecting to all offline servers
+  /// Returns the number of servers that successfully reconnected
+  Future<int> retryOfflineServers({String? clientIdentifier}) async {
+    if (_isRetryingOfflineServers) {
+      appLogger.d('Offline server retry already in progress, skipping');
+      return 0;
+    }
+
+    final offlineIds = offlineServerIds;
+    if (offlineIds.isEmpty) {
+      return 0;
+    }
+
+    _isRetryingOfflineServers = true;
+    appLogger.d('Retrying ${offlineIds.length} offline servers...');
+
+    final effectiveClientId =
+        clientIdentifier ?? DateTime.now().millisecondsSinceEpoch.toString();
+
+    int reconnectedCount = 0;
+
+    for (final serverId in offlineIds) {
+      final server = _servers[serverId];
+      if (server == null) {
+        appLogger.w('No server info found for offline server $serverId');
+        continue;
+      }
+
+      try {
+        appLogger.d('Attempting to reconnect to offline server: ${server.name}');
+
+        // Try to find a working connection
+        PlexConnection? workingConnection;
+        await for (final connection in server.findBestWorkingConnection()) {
+          workingConnection = connection;
+          break;
+        }
+
+        if (workingConnection == null) {
+          appLogger.d('Server ${server.name} still offline - no working connection');
+          continue;
+        }
+
+        final baseUrl = workingConnection.uri;
+        appLogger.d('Found working connection for ${server.name} at $baseUrl');
+
+        // Get storage and load cached endpoint for this server
+        final storage = await StorageService.getInstance();
+        final cachedEndpoint = storage.getServerEndpoint(serverId);
+
+        // Create PlexClient with the working connection and failover support
+        final prioritizedEndpoints = server.prioritizedEndpointUrls(
+          preferredFirst: cachedEndpoint ?? baseUrl,
+        );
+        final config = await PlexConfig.create(
+          baseUrl: baseUrl,
+          token: server.accessToken,
+          clientIdentifier: effectiveClientId,
+        );
+
+        final client = PlexClient(
+          config,
+          serverId: serverId,
+          serverName: server.name,
+          prioritizedEndpoints: prioritizedEndpoints,
+          onEndpointChanged: (newUrl) async {
+            await storage.saveServerEndpoint(serverId, newUrl);
+            appLogger.i(
+              'Updated endpoint for ${server.name} after failover: $newUrl',
+            );
+          },
+        );
+
+        // Save the endpoint
+        await storage.saveServerEndpoint(serverId, baseUrl);
+
+        // Store the client and update status
+        _clients[serverId] = client;
+        _serverStatus[serverId] = true;
+
+        appLogger.i('Successfully reconnected to ${server.name}');
+        reconnectedCount++;
+
+        // Emit server came online event for UI refresh
+        _serverCameOnlineController.add(serverId);
+      } catch (e, stackTrace) {
+        appLogger.d(
+          'Failed to reconnect to ${server.name}',
+          error: e,
+          stackTrace: stackTrace,
+        );
+        // Server stays offline, will retry on next interval
+      }
+    }
+
+    _isRetryingOfflineServers = false;
+
+    if (reconnectedCount > 0) {
+      appLogger.i(
+        'Reconnected to $reconnectedCount/${offlineIds.length} previously offline servers',
+      );
+      // Notify listeners of status change
+      _statusController.add(Map.from(_serverStatus));
+    }
+
+    return reconnectedCount;
+  }
+
+  /// Start periodic retry timer for offline servers
+  void startOfflineRetryTimer({String? clientIdentifier}) {
+    if (_offlineRetryTimer != null) {
+      appLogger.d('Offline retry timer already active');
+      return;
+    }
+
+    appLogger.i('Starting offline server retry timer (interval: ${_offlineRetryInterval.inSeconds}s)');
+    _offlineRetryTimer = Timer.periodic(_offlineRetryInterval, (_) async {
+      if (offlineServerIds.isEmpty) {
+        // No offline servers, stop the timer
+        stopOfflineRetryTimer();
+        return;
+      }
+
+      await retryOfflineServers(clientIdentifier: clientIdentifier);
+    });
+  }
+
+  /// Stop the offline retry timer
+  void stopOfflineRetryTimer() {
+    if (_offlineRetryTimer != null) {
+      _offlineRetryTimer?.cancel();
+      _offlineRetryTimer = null;
+      appLogger.d('Stopped offline server retry timer');
+    }
+  }
+
   /// Start monitoring network connectivity for all servers
   void startNetworkMonitoring() {
     if (_connectivitySubscription != null) {
@@ -343,8 +503,16 @@ class MultiServerManager {
           },
         );
 
-        // Re-optimize all servers
+        // Re-optimize online servers
         _reoptimizeAllServers(reason: 'connectivity:${status.name}');
+
+        // Also retry offline servers on connectivity change
+        if (offlineServerIds.isNotEmpty) {
+          appLogger.d(
+            'Connectivity restored, retrying ${offlineServerIds.length} offline servers',
+          );
+          retryOfflineServers();
+        }
       },
       onError: (error, stackTrace) {
         appLogger.w(
@@ -444,6 +612,7 @@ class MultiServerManager {
   void disconnectAll() {
     appLogger.i('Disconnecting all servers');
     stopNetworkMonitoring();
+    stopOfflineRetryTimer();
     _clients.clear();
     _servers.clear();
     _serverStatus.clear();
@@ -455,5 +624,6 @@ class MultiServerManager {
   void dispose() {
     disconnectAll();
     _statusController.close();
+    _serverCameOnlineController.close();
   }
 }

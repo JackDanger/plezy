@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +12,7 @@ import '../providers/hidden_libraries_provider.dart';
 import '../providers/multi_server_provider.dart';
 import '../utils/app_logger.dart';
 import '../utils/keyboard_utils.dart';
+import '../utils/library_refresh_notifier.dart';
 import '../utils/provider_extensions.dart';
 import '../widgets/desktop_app_bar.dart';
 import '../widgets/context_menu_wrapper.dart';
@@ -92,6 +95,9 @@ class _LibrariesScreenState extends State<LibrariesScreen>
   /// Scroll controller for the main CustomScrollView
   final ScrollController _scrollController = ScrollController();
 
+  /// Subscription for server online events (to refresh when a server comes back)
+  StreamSubscription<void>? _librariesChangedSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -102,6 +108,12 @@ class _LibrariesScreenState extends State<LibrariesScreen>
     _editButtonFocusNode = FocusNode(debugLabel: 'EditLibrariesButton');
     _refreshButtonFocusNode = FocusNode(debugLabel: 'RefreshButton');
     _loadLibraries();
+
+    // Listen for server online events to refresh library list
+    _librariesChangedSubscription = LibraryRefreshNotifier().librariesChangedStream.listen((_) {
+      appLogger.d('LibrariesScreen: Server came online, refreshing library list');
+      _loadLibraries();
+    });
   }
 
   void _onTabChanged() {
@@ -120,6 +132,7 @@ class _LibrariesScreenState extends State<LibrariesScreen>
 
   @override
   void dispose() {
+    _librariesChangedSubscription?.cancel();
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _tabChipsFocusNode.dispose();

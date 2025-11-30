@@ -25,6 +25,7 @@ import '../i18n/strings.g.dart';
 import '../mixins/item_updatable.dart';
 import '../utils/app_logger.dart';
 import '../utils/keyboard_utils.dart';
+import '../utils/library_refresh_notifier.dart';
 import '../utils/provider_extensions.dart';
 import '../utils/video_player_navigation.dart';
 import '../utils/content_rating_formatter.dart';
@@ -74,6 +75,9 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   late final FocusNode _heroFocusNode;
   bool _heroIsFocused = false;
 
+  /// Subscription for server online events (to refresh when a server comes back)
+  StreamSubscription<void>? _librariesChangedSubscription;
+
   /// Get the correct PlexClient for an item's server
   PlexClient _getClientForItem(PlexMetadata? item) {
     // Items should always have a serverId, but if not, fall back to first available server
@@ -104,6 +108,12 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     _heroFocusNode.addListener(_handleHeroFocusChange);
     _loadContent();
     _startAutoScroll();
+
+    // Listen for server online events to refresh content
+    _librariesChangedSubscription = LibraryRefreshNotifier().librariesChangedStream.listen((_) {
+      appLogger.d('DiscoverScreen: Server came online, refreshing content');
+      _loadContent();
+    });
   }
 
   void _handleHeroFocusChange() {
@@ -179,6 +189,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
 
   @override
   void dispose() {
+    _librariesChangedSubscription?.cancel();
     _autoScrollTimer?.cancel();
     _heroController.dispose();
     _scrollController.dispose();

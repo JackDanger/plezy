@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../client/plex_client.dart';
@@ -5,16 +7,28 @@ import '../services/data_aggregation_service.dart';
 import '../services/multi_server_manager.dart';
 import '../services/plex_auth_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/library_refresh_notifier.dart';
 
 /// Provider for multi-server Plex connections
 /// Manages multiple PlexClient instances and provides data aggregation
 class MultiServerProvider extends ChangeNotifier {
   final MultiServerManager _serverManager;
   final DataAggregationService _aggregationService;
+  StreamSubscription<Map<String, bool>>? _statusSubscription;
+  StreamSubscription<String>? _serverCameOnlineSubscription;
 
   MultiServerProvider(this._serverManager, this._aggregationService) {
     // Listen to server status changes
-    _serverManager.statusStream.listen((_) {
+    _statusSubscription = _serverManager.statusStream.listen((_) {
+      notifyListeners();
+    });
+
+    // Listen for servers coming back online and forward to LibraryRefreshNotifier
+    _serverCameOnlineSubscription = _serverManager.serverCameOnlineStream.listen((serverId) {
+      final server = _serverManager.getServer(serverId);
+      final serverName = server?.name ?? serverId;
+      appLogger.i('Server came back online: $serverName - triggering UI refresh');
+      LibraryRefreshNotifier().notifyServerCameOnline(serverId);
       notifyListeners();
     });
   }
@@ -104,6 +118,8 @@ class MultiServerProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _statusSubscription?.cancel();
+    _serverCameOnlineSubscription?.cancel();
     _serverManager.dispose();
     super.dispose();
   }
