@@ -246,6 +246,7 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
       final debugLoggingEnabled = settingsService.getEnableDebugLogging();
 
       // Build MPV configuration
+      // Disable features that can cause threading issues with playlist parsing
       final config = <String, String>{
         'sub-font-size': settingsService.getSubtitleFontSize().toString(),
         'sub-color': settingsService.getSubtitleTextColor(),
@@ -254,6 +255,9 @@ class VideoPlayerScreenState extends State<VideoPlayerScreen>
         'sub-back-color':
             '#${(settingsService.getSubtitleBackgroundOpacity() * 255 / 100).toInt().toRadixString(16).padLeft(2, '0').toUpperCase()}${settingsService.getSubtitleBackgroundColor().replaceFirst('#', '')}',
         'sub-ass-override': 'no',
+        'ytdl': 'no', // Disable youtube-dl to prevent URL interception
+        'prefetch-playlist': 'no', // Disable playlist prefetching
+        'load-scripts': 'no', // Disable script loading
       };
 
       if (Platform.isIOS) {

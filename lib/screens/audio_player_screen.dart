@@ -132,8 +132,12 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 
       // Build MPV configuration for audio-only playback
       // Disable video output to prevent video rendering initialization
+      // Disable features that can cause threading issues with playlist parsing
       final config = <String, String>{
         'vo': 'null', // Disable video output for audio-only playback
+        'ytdl': 'no', // Disable youtube-dl to prevent URL interception
+        'prefetch-playlist': 'no', // Disable playlist prefetching
+        'load-scripts': 'no', // Disable script loading
       };
 
       // Create player with configuration
