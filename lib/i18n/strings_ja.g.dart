@@ -157,6 +157,8 @@ class _TranslationsCommonJa implements TranslationsCommonEn {
 	@override String get loadingServers => 'サーバーを読み込み中...';
 	@override String get connectingToServers => 'サーバーに接続中...';
 	@override String get startingOfflineMode => 'オフラインモードを開始中...';
+	@override String get more => 'More';
+	@override String get description => 'Description';
 }
 
 // Path: screens
@@ -1201,6 +1203,12 @@ class _TranslationsLibrariesGroupingsJa implements TranslationsLibrariesGrouping
 	@override String get seasons => 'シーズン';
 	@override String get episodes => 'エピソード';
 	@override String get folders => 'フォルダ';
+	@override String get artists => 'Artists';
+	@override String get albums => 'Albums';
+	@override String get tracks => 'Tracks';
+	@override String get books => 'Books';
+	@override String get authors => 'Authors';
+	@override String get chapters => 'Chapters';
 }
 
 // Path: companionRemote.session
@@ -1362,6 +1370,8 @@ extension on TranslationsJa {
 			'common.loadingServers' => 'サーバーを読み込み中...',
 			'common.connectingToServers' => 'サーバーに接続中...',
 			'common.startingOfflineMode' => 'オフラインモードを開始中...',
+			'common.more' => 'More',
+			'common.description' => 'Description',
 			'screens.licenses' => 'ライセンス',
 			'screens.switchProfile' => 'プロフィール切替',
 			'screens.subtitleStyling' => '字幕スタイル',
@@ -1781,6 +1791,12 @@ extension on TranslationsJa {
 			'libraries.groupings.seasons' => 'シーズン',
 			'libraries.groupings.episodes' => 'エピソード',
 			'libraries.groupings.folders' => 'フォルダ',
+			'libraries.groupings.artists' => 'Artists',
+			'libraries.groupings.albums' => 'Albums',
+			'libraries.groupings.tracks' => 'Tracks',
+			'libraries.groupings.books' => 'Books',
+			'libraries.groupings.authors' => 'Authors',
+			'libraries.groupings.chapters' => 'Chapters',
 			'about.title' => 'アプリについて',
 			'about.openSourceLicenses' => 'オープンソースライセンス',
 			'about.versionLabel' => ({required Object version}) => 'バージョン ${version}',
@@ -1811,6 +1827,8 @@ extension on TranslationsJa {
 			'liveTv.guide' => '番組表',
 			'liveTv.noChannels' => 'チャンネルがありません',
 			'liveTv.noDvr' => 'どのサーバーにもDVRが設定されていません',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.tuneFailed' => 'チャンネルのチューニングに失敗しました',
 			'liveTv.loading' => 'チャンネルを読み込み中...',
 			'liveTv.nowPlaying' => '現在放送中',
@@ -1819,8 +1837,6 @@ extension on TranslationsJa {
 			'liveTv.live' => 'ライブ',
 			'liveTv.hd' => 'HD',
 			'liveTv.premiere' => '新着',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.reloadGuide' => '番組表を再読込',
 			'liveTv.allChannels' => 'すべてのチャンネル',
 			'liveTv.now' => '現在',

@@ -58,7 +58,9 @@
     "refreshingServers": "Oppdaterer servere...",
     "loadingServers": "Laster servere...",
     "connectingToServers": "Kobler til servere...",
-    "startingOfflineMode": "Starter frakoblet modus..."
+    "startingOfflineMode": "Starter frakoblet modus...",
+    "more": "More",
+    "description": "Description"
   },
   "screens": {
     "licenses": "Lisenser",
@@ -522,7 +524,13 @@
       "shows": "TV-serier",
       "seasons": "Sesonger",
       "episodes": "Episoder",
-      "folders": "Mapper"
+      "folders": "Mapper",
+      "artists": "Artists",
+      "albums": "Albums",
+      "tracks": "Tracks",
+      "books": "Books",
+      "authors": "Authors",
+      "chapters": "Chapters"
     }
   },
   "about": {

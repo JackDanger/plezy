@@ -58,7 +58,9 @@
     "refreshingServers": "Actualisation des serveurs...",
     "loadingServers": "Chargement des serveurs...",
     "connectingToServers": "Connexion aux serveurs...",
-    "startingOfflineMode": "Démarrage en mode hors-ligne..."
+    "startingOfflineMode": "Démarrage en mode hors-ligne...",
+    "more": "More",
+    "description": "Description"
   },
   "screens": {
     "licenses": "Licenses",
@@ -522,7 +524,13 @@
       "shows": "Show TV",
       "seasons": "Saisons",
       "episodes": "Épisodes",
-      "folders": "Dossiers"
+      "folders": "Dossiers",
+      "artists": "Artists",
+      "albums": "Albums",
+      "tracks": "Tracks",
+      "books": "Books",
+      "authors": "Authors",
+      "chapters": "Chapters"
     }
   },
   "about": {

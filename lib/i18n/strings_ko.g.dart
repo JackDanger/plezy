@@ -157,6 +157,8 @@ class _TranslationsCommonKo implements TranslationsCommonEn {
 	@override String get loadingServers => '서버 로딩 중...';
 	@override String get connectingToServers => '서버 연결 중...';
 	@override String get startingOfflineMode => '오프라인 모드 시작 중...';
+	@override String get more => 'More';
+	@override String get description => 'Description';
 }
 
 // Path: screens
@@ -1201,6 +1203,12 @@ class _TranslationsLibrariesGroupingsKo implements TranslationsLibrariesGrouping
 	@override String get seasons => '시즌';
 	@override String get episodes => '화';
 	@override String get folders => '폴더';
+	@override String get artists => 'Artists';
+	@override String get albums => 'Albums';
+	@override String get tracks => 'Tracks';
+	@override String get books => 'Books';
+	@override String get authors => 'Authors';
+	@override String get chapters => 'Chapters';
 }
 
 // Path: companionRemote.session
@@ -1362,6 +1370,8 @@ extension on TranslationsKo {
 			'common.loadingServers' => '서버 로딩 중...',
 			'common.connectingToServers' => '서버 연결 중...',
 			'common.startingOfflineMode' => '오프라인 모드 시작 중...',
+			'common.more' => 'More',
+			'common.description' => 'Description',
 			'screens.licenses' => '라이선스',
 			'screens.switchProfile' => '프로필 전환',
 			'screens.subtitleStyling' => '자막 스타일 설정',
@@ -1781,6 +1791,12 @@ extension on TranslationsKo {
 			'libraries.groupings.seasons' => '시즌',
 			'libraries.groupings.episodes' => '화',
 			'libraries.groupings.folders' => '폴더',
+			'libraries.groupings.artists' => 'Artists',
+			'libraries.groupings.albums' => 'Albums',
+			'libraries.groupings.tracks' => 'Tracks',
+			'libraries.groupings.books' => 'Books',
+			'libraries.groupings.authors' => 'Authors',
+			'libraries.groupings.chapters' => 'Chapters',
 			'about.title' => '소개',
 			'about.openSourceLicenses' => '오픈소스 라이선스',
 			'about.versionLabel' => ({required Object version}) => '버전 ${version}',
@@ -1811,6 +1827,8 @@ extension on TranslationsKo {
 			'liveTv.guide' => '편성표',
 			'liveTv.noChannels' => '사용 가능한 채널이 없습니다',
 			'liveTv.noDvr' => '서버에 DVR이 구성되어 있지 않습니다',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.tuneFailed' => '채널 튜닝에 실패했습니다',
 			'liveTv.loading' => '채널 로딩 중...',
 			'liveTv.nowPlaying' => '현재 재생 중',
@@ -1819,8 +1837,6 @@ extension on TranslationsKo {
 			'liveTv.live' => '실시간',
 			'liveTv.hd' => 'HD',
 			'liveTv.premiere' => '신규',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.reloadGuide' => '편성표 새로고침',
 			'liveTv.allChannels' => '전체 채널',
 			'liveTv.now' => '지금',

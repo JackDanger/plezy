@@ -157,6 +157,8 @@ class _TranslationsCommonNb implements TranslationsCommonEn {
 	@override String get loadingServers => 'Laster servere...';
 	@override String get connectingToServers => 'Kobler til servere...';
 	@override String get startingOfflineMode => 'Starter frakoblet modus...';
+	@override String get more => 'More';
+	@override String get description => 'Description';
 }
 
 // Path: screens
@@ -1201,6 +1203,12 @@ class _TranslationsLibrariesGroupingsNb implements TranslationsLibrariesGrouping
 	@override String get seasons => 'Sesonger';
 	@override String get episodes => 'Episoder';
 	@override String get folders => 'Mapper';
+	@override String get artists => 'Artists';
+	@override String get albums => 'Albums';
+	@override String get tracks => 'Tracks';
+	@override String get books => 'Books';
+	@override String get authors => 'Authors';
+	@override String get chapters => 'Chapters';
 }
 
 // Path: companionRemote.session
@@ -1362,6 +1370,8 @@ extension on TranslationsNb {
 			'common.loadingServers' => 'Laster servere...',
 			'common.connectingToServers' => 'Kobler til servere...',
 			'common.startingOfflineMode' => 'Starter frakoblet modus...',
+			'common.more' => 'More',
+			'common.description' => 'Description',
 			'screens.licenses' => 'Lisenser',
 			'screens.switchProfile' => 'Bytt profil',
 			'screens.subtitleStyling' => 'Undertekststil',
@@ -1781,6 +1791,12 @@ extension on TranslationsNb {
 			'libraries.groupings.seasons' => 'Sesonger',
 			'libraries.groupings.episodes' => 'Episoder',
 			'libraries.groupings.folders' => 'Mapper',
+			'libraries.groupings.artists' => 'Artists',
+			'libraries.groupings.albums' => 'Albums',
+			'libraries.groupings.tracks' => 'Tracks',
+			'libraries.groupings.books' => 'Books',
+			'libraries.groupings.authors' => 'Authors',
+			'libraries.groupings.chapters' => 'Chapters',
 			'about.title' => 'Om',
 			'about.openSourceLicenses' => 'Åpen kildekode-lisenser',
 			'about.versionLabel' => ({required Object version}) => 'Versjon ${version}',
@@ -1811,6 +1827,8 @@ extension on TranslationsNb {
 			'liveTv.guide' => 'Programguide',
 			'liveTv.noChannels' => 'Ingen kanaler tilgjengelig',
 			'liveTv.noDvr' => 'Ingen DVR konfigurert på noen server',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.tuneFailed' => 'Kunne ikke stille inn kanal',
 			'liveTv.loading' => 'Laster kanaler...',
 			'liveTv.nowPlaying' => 'Spilles nå',
@@ -1819,8 +1837,6 @@ extension on TranslationsNb {
 			'liveTv.live' => 'DIREKTE',
 			'liveTv.hd' => 'HD',
 			'liveTv.premiere' => 'NY',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.reloadGuide' => 'Last inn programguide på nytt',
 			'liveTv.allChannels' => 'Alle kanaler',
 			'liveTv.now' => 'Nå',

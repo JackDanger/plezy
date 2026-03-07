@@ -93,7 +93,7 @@ List<PlexMetadata> _processOnDeckResponse(Map<String, dynamic> decoded, String s
       )
       .toList();
 
-  return allItems.where((item) => !item.isMusicContent).toList();
+  return allItems;
 }
 
 /// Constants for Plex stream types
@@ -565,6 +565,32 @@ class PlexClient {
     );
   }
 
+  /// Get chapters for a media item
+  Future<List<PlexChapter>> getChapters(String ratingKey) async {
+    try {
+      final response = await _dio.get(
+        '/library/metadata/$ratingKey',
+        queryParameters: {'includeChapters': 1},
+      );
+      final metadataJson = _getFirstMetadataJson(response);
+      if (metadataJson == null) return [];
+      final chapterList = metadataJson['Chapter'] as List<dynamic>? ?? [];
+      return chapterList.map((c) {
+        final m = c as Map<String, dynamic>;
+        return PlexChapter(
+          id: m['id'] as int? ?? 0,
+          index: m['index'] as int?,
+          startTimeOffset: m['startTimeOffset'] as int?,
+          endTimeOffset: m['endTimeOffset'] as int?,
+          title: m['tag'] as String? ?? m['title'] as String?,
+          thumb: m['thumb'] as String?,
+        );
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Parse PlexMetadata with images from a cached response
   PlexMetadata? _parseMetadataWithImagesFromCachedResponse(Map<String, dynamic> cached) {
     final firstMetadata = PlexCacheParser.extractFirstMetadata(cached);
@@ -879,8 +905,7 @@ class PlexClient {
     );
     final allItems = _extractMetadataList(response);
 
-    // Filter out music content (artists, albums, tracks)
-    return allItems.where((item) => !item.isMusicContent).toList();
+    return allItems;
   }
 
   /// Get on deck items (continue watching, filtered to video content only)

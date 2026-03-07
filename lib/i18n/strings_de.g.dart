@@ -157,6 +157,8 @@ class _TranslationsCommonDe implements TranslationsCommonEn {
 	@override String get loadingServers => 'Server werden geladen...';
 	@override String get connectingToServers => 'Verbindung zu Servern...';
 	@override String get startingOfflineMode => 'Offlinemodus wird gestartet...';
+	@override String get more => 'More';
+	@override String get description => 'Description';
 }
 
 // Path: screens
@@ -1201,6 +1203,12 @@ class _TranslationsLibrariesGroupingsDe implements TranslationsLibrariesGrouping
 	@override String get seasons => 'Staffeln';
 	@override String get episodes => 'Episoden';
 	@override String get folders => 'Ordner';
+	@override String get artists => 'Artists';
+	@override String get albums => 'Albums';
+	@override String get tracks => 'Tracks';
+	@override String get books => 'Books';
+	@override String get authors => 'Authors';
+	@override String get chapters => 'Chapters';
 }
 
 // Path: companionRemote.session
@@ -1362,6 +1370,8 @@ extension on TranslationsDe {
 			'common.loadingServers' => 'Server werden geladen...',
 			'common.connectingToServers' => 'Verbindung zu Servern...',
 			'common.startingOfflineMode' => 'Offlinemodus wird gestartet...',
+			'common.more' => 'More',
+			'common.description' => 'Description',
 			'screens.licenses' => 'Lizenzen',
 			'screens.switchProfile' => 'Profil wechseln',
 			'screens.subtitleStyling' => 'Untertitel-Stil',
@@ -1781,6 +1791,12 @@ extension on TranslationsDe {
 			'libraries.groupings.seasons' => 'Staffeln',
 			'libraries.groupings.episodes' => 'Episoden',
 			'libraries.groupings.folders' => 'Ordner',
+			'libraries.groupings.artists' => 'Artists',
+			'libraries.groupings.albums' => 'Albums',
+			'libraries.groupings.tracks' => 'Tracks',
+			'libraries.groupings.books' => 'Books',
+			'libraries.groupings.authors' => 'Authors',
+			'libraries.groupings.chapters' => 'Chapters',
 			'about.title' => 'Über',
 			'about.openSourceLicenses' => 'Open-Source-Lizenzen',
 			'about.versionLabel' => ({required Object version}) => 'Version ${version}',
@@ -1811,6 +1827,8 @@ extension on TranslationsDe {
 			'liveTv.guide' => 'Programmführer',
 			'liveTv.noChannels' => 'Keine Kanäle verfügbar',
 			'liveTv.noDvr' => 'Kein DVR auf einem Server konfiguriert',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.tuneFailed' => 'Kanal konnte nicht eingestellt werden',
 			'liveTv.loading' => 'Kanäle werden geladen...',
 			'liveTv.nowPlaying' => 'Läuft gerade',
@@ -1819,8 +1837,6 @@ extension on TranslationsDe {
 			'liveTv.live' => 'LIVE',
 			'liveTv.hd' => 'HD',
 			'liveTv.premiere' => 'NEU',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.reloadGuide' => 'Programmführer neu laden',
 			'liveTv.allChannels' => 'Alle Kanäle',
 			'liveTv.now' => 'Jetzt',

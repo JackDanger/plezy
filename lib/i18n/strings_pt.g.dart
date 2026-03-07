@@ -157,6 +157,8 @@ class _TranslationsCommonPt implements TranslationsCommonEn {
 	@override String get loadingServers => 'Carregando servidores...';
 	@override String get connectingToServers => 'Conectando aos servidores...';
 	@override String get startingOfflineMode => 'Iniciando modo offline...';
+	@override String get more => 'More';
+	@override String get description => 'Description';
 }
 
 // Path: screens
@@ -1201,6 +1203,12 @@ class _TranslationsLibrariesGroupingsPt implements TranslationsLibrariesGrouping
 	@override String get seasons => 'Temporadas';
 	@override String get episodes => 'Episódios';
 	@override String get folders => 'Pastas';
+	@override String get artists => 'Artists';
+	@override String get albums => 'Albums';
+	@override String get tracks => 'Tracks';
+	@override String get books => 'Books';
+	@override String get authors => 'Authors';
+	@override String get chapters => 'Chapters';
 }
 
 // Path: companionRemote.session
@@ -1362,6 +1370,8 @@ extension on TranslationsPt {
 			'common.loadingServers' => 'Carregando servidores...',
 			'common.connectingToServers' => 'Conectando aos servidores...',
 			'common.startingOfflineMode' => 'Iniciando modo offline...',
+			'common.more' => 'More',
+			'common.description' => 'Description',
 			'screens.licenses' => 'Licenças',
 			'screens.switchProfile' => 'Trocar Perfil',
 			'screens.subtitleStyling' => 'Estilo de Legendas',
@@ -1781,6 +1791,12 @@ extension on TranslationsPt {
 			'libraries.groupings.seasons' => 'Temporadas',
 			'libraries.groupings.episodes' => 'Episódios',
 			'libraries.groupings.folders' => 'Pastas',
+			'libraries.groupings.artists' => 'Artists',
+			'libraries.groupings.albums' => 'Albums',
+			'libraries.groupings.tracks' => 'Tracks',
+			'libraries.groupings.books' => 'Books',
+			'libraries.groupings.authors' => 'Authors',
+			'libraries.groupings.chapters' => 'Chapters',
 			'about.title' => 'Sobre',
 			'about.openSourceLicenses' => 'Licenças Open Source',
 			'about.versionLabel' => ({required Object version}) => 'Versão ${version}',
@@ -1811,6 +1827,8 @@ extension on TranslationsPt {
 			'liveTv.guide' => 'Guia',
 			'liveTv.noChannels' => 'Nenhum canal disponível',
 			'liveTv.noDvr' => 'Nenhum DVR configurado em nenhum servidor',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.tuneFailed' => 'Falha ao sintonizar canal',
 			'liveTv.loading' => 'Carregando canais...',
 			'liveTv.nowPlaying' => 'Reproduzindo Agora',
@@ -1819,8 +1837,6 @@ extension on TranslationsPt {
 			'liveTv.live' => 'AO VIVO',
 			'liveTv.hd' => 'HD',
 			'liveTv.premiere' => 'NOVO',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.reloadGuide' => 'Recarregar Guia',
 			'liveTv.allChannels' => 'Todos os Canais',
 			'liveTv.now' => 'Agora',

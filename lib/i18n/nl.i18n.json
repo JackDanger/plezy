@@ -58,7 +58,9 @@
     "refreshingServers": "Servers vernieuwen...",
     "loadingServers": "Servers laden...",
     "connectingToServers": "Verbinden met servers...",
-    "startingOfflineMode": "Offlinemodus starten..."
+    "startingOfflineMode": "Offlinemodus starten...",
+    "more": "More",
+    "description": "Description"
   },
   "screens": {
     "licenses": "Licenties",
@@ -522,7 +524,13 @@
       "shows": "Series",
       "seasons": "Seizoenen",
       "episodes": "Afleveringen",
-      "folders": "Mappen"
+      "folders": "Mappen",
+      "artists": "Artists",
+      "albums": "Albums",
+      "tracks": "Tracks",
+      "books": "Books",
+      "authors": "Authors",
+      "chapters": "Chapters"
     }
   },
   "about": {

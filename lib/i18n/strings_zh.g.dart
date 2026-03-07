@@ -157,6 +157,8 @@ class _TranslationsCommonZh implements TranslationsCommonEn {
 	@override String get loadingServers => '正在加载服务器...';
 	@override String get connectingToServers => '正在连接服务器...';
 	@override String get startingOfflineMode => '正在启动离线模式...';
+	@override String get more => 'More';
+	@override String get description => 'Description';
 }
 
 // Path: screens
@@ -1201,6 +1203,12 @@ class _TranslationsLibrariesGroupingsZh implements TranslationsLibrariesGrouping
 	@override String get seasons => '季';
 	@override String get episodes => '集';
 	@override String get folders => '文件夹';
+	@override String get artists => 'Artists';
+	@override String get albums => 'Albums';
+	@override String get tracks => 'Tracks';
+	@override String get books => 'Books';
+	@override String get authors => 'Authors';
+	@override String get chapters => 'Chapters';
 }
 
 // Path: companionRemote.session
@@ -1362,6 +1370,8 @@ extension on TranslationsZh {
 			'common.loadingServers' => '正在加载服务器...',
 			'common.connectingToServers' => '正在连接服务器...',
 			'common.startingOfflineMode' => '正在启动离线模式...',
+			'common.more' => 'More',
+			'common.description' => 'Description',
 			'screens.licenses' => '许可证',
 			'screens.switchProfile' => '切换用户',
 			'screens.subtitleStyling' => '字幕样式',
@@ -1781,6 +1791,12 @@ extension on TranslationsZh {
 			'libraries.groupings.seasons' => '季',
 			'libraries.groupings.episodes' => '集',
 			'libraries.groupings.folders' => '文件夹',
+			'libraries.groupings.artists' => 'Artists',
+			'libraries.groupings.albums' => 'Albums',
+			'libraries.groupings.tracks' => 'Tracks',
+			'libraries.groupings.books' => 'Books',
+			'libraries.groupings.authors' => 'Authors',
+			'libraries.groupings.chapters' => 'Chapters',
 			'about.title' => '关于',
 			'about.openSourceLicenses' => '开源许可证',
 			'about.versionLabel' => ({required Object version}) => '版本 ${version}',
@@ -1811,6 +1827,8 @@ extension on TranslationsZh {
 			'liveTv.guide' => '节目指南',
 			'liveTv.noChannels' => '没有可用的频道',
 			'liveTv.noDvr' => '没有服务器配置了DVR',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.tuneFailed' => '无法调谐频道',
 			'liveTv.loading' => '正在加载频道...',
 			'liveTv.nowPlaying' => '正在播放',
@@ -1819,8 +1837,6 @@ extension on TranslationsZh {
 			'liveTv.live' => '直播',
 			'liveTv.hd' => '高清',
 			'liveTv.premiere' => '新',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.reloadGuide' => '重新加载节目指南',
 			'liveTv.allChannels' => '所有频道',
 			'liveTv.now' => '现在',

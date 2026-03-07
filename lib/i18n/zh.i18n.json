@@ -58,7 +58,9 @@
     "refreshingServers": "正在刷新服务器...",
     "loadingServers": "正在加载服务器...",
     "connectingToServers": "正在连接服务器...",
-    "startingOfflineMode": "正在启动离线模式..."
+    "startingOfflineMode": "正在启动离线模式...",
+    "more": "More",
+    "description": "Description"
   },
   "screens": {
     "licenses": "许可证",
@@ -522,7 +524,13 @@
       "shows": "剧集",
       "seasons": "季",
       "episodes": "集",
-      "folders": "文件夹"
+      "folders": "文件夹",
+      "artists": "Artists",
+      "albums": "Albums",
+      "tracks": "Tracks",
+      "books": "Books",
+      "authors": "Authors",
+      "chapters": "Chapters"
     }
   },
   "about": {

@@ -58,7 +58,9 @@
     "refreshingServers": "Actualizando servidores...",
     "loadingServers": "Cargando servidores...",
     "connectingToServers": "Conectando a servidores...",
-    "startingOfflineMode": "Iniciando modo sin conexión..."
+    "startingOfflineMode": "Iniciando modo sin conexión...",
+    "more": "More",
+    "description": "Description"
   },
   "screens": {
     "licenses": "Licencias",
@@ -522,7 +524,13 @@
       "shows": "Series",
       "seasons": "Temporadas",
       "episodes": "Episodios",
-      "folders": "Carpetas"
+      "folders": "Carpetas",
+      "artists": "Artists",
+      "albums": "Albums",
+      "tracks": "Tracks",
+      "books": "Books",
+      "authors": "Authors",
+      "chapters": "Chapters"
     }
   },
   "about": {
