@@ -633,6 +633,30 @@ class PlexClient {
     return parseResponse(response);
   }
 
+  /// Network-first fetch: try network, cache the result, fall back to cache on failure.
+  Future<T?> _fetchNetworkFirst<T>({
+    required String cacheKey,
+    required Future<Response> Function() networkCall,
+    required T? Function(dynamic cachedData) parseCache,
+    required T? Function(Response response) parseResponse,
+    bool cacheResponse = true,
+  }) async {
+    if (!_offlineMode) {
+      try {
+        final response = await networkCall();
+        if (cacheResponse && response.data != null) {
+          await _cache.put(serverId, cacheKey, response.data);
+        }
+        return parseResponse(response);
+      } catch (_) {
+        // Fall through to cache
+      }
+    }
+    final cached = await _cache.get(serverId, cacheKey);
+    if (cached != null) return parseCache(cached);
+    return null;
+  }
+
   /// Get first metadata JSON from response data
   Map<String, dynamic>? _getFirstMetadataJsonFromData(Map<String, dynamic>? data) =>
       PlexCacheParser.extractFirstMetadata(data);
@@ -923,6 +947,33 @@ class PlexClient {
 
     // Filter for unwatched episodes
     return episodes.where((ep) => ep.isEpisode && (ep.viewCount ?? 0) == 0).toList();
+  }
+
+  /// Auth token shorthand for watch connectivity
+  String? get authToken => config.token;
+
+  /// Get direct stream URL for a media item (used by Watch app)
+  Future<String?> getDirectStreamUrl(String ratingKey, {int mediaIndex = 0}) async {
+    final response = await _dio.get('/library/metadata/$ratingKey');
+    final metadataJson = _getFirstMetadataJson(response);
+
+    if (metadataJson != null &&
+        metadataJson['Media'] != null &&
+        (metadataJson['Media'] as List).isNotEmpty) {
+      final mediaList = metadataJson['Media'] as List;
+      if (mediaIndex < 0 || mediaIndex >= mediaList.length) {
+        mediaIndex = 0;
+      }
+      final media = mediaList[mediaIndex];
+      if (media['Part'] != null && (media['Part'] as List).isNotEmpty) {
+        final part = media['Part'][0];
+        final partKey = part['key'] as String?;
+        if (partKey != null) {
+          return '${config.baseUrl}$partKey'.withPlexToken(config.token);
+        }
+      }
+    }
+    return null;
   }
 
   /// Get thumbnail URL
