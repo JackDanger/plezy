@@ -50,6 +50,7 @@ struct LocalPlaybackView: View {
 // MARK: - Main Playback Page
 struct MainPlaybackPage: View {
     @StateObject private var audioPlayer = WatchAudioPlayer.shared
+    @EnvironmentObject var connectivity: WatchConnectivityManager
     @Binding var dragOffset: CGFloat
     var onDismiss: () -> Void
     
@@ -114,21 +115,45 @@ struct MainPlaybackPage: View {
             }
             .padding(.top, 4)
             
-            // Queue position + hint to swipe
-            if audioPlayer.queue.count > 1 {
-                HStack(spacing: 4) {
-                    Text("\(audioPlayer.currentIndex + 1)/\(audioPlayer.queue.count)")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                    
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.tertiary)
+            // Radio + queue position
+            HStack(spacing: 12) {
+                if PlexWatchClient.shared.hasCredentials, let item = audioPlayer.currentItem {
+                    Button(action: { startRadio(from: item) }) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.blue)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                if audioPlayer.queue.count > 1 {
+                    HStack(spacing: 4) {
+                        Text("\(audioPlayer.currentIndex + 1)/\(audioPlayer.queue.count)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 8)
+    }
+
+    private func startRadio(from item: QueueItem) {
+        Task {
+            if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.id) {
+                let client = PlexWatchClient.shared
+                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+                if !queueItems.isEmpty {
+                    await MainActor.run {
+                        WatchAudioPlayer.shared.loadQueue(queueItems)
+                    }
+                }
+            }
+        }
     }
 }
 

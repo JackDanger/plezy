@@ -154,11 +154,23 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
     
     private func handleQueueTransfer(_ queueData: [[String: Any]], startIndex: Int, playQueueRef: PlayQueueReference? = nil) {
+        // Persist Plex credentials from the queue transfer for independent Watch operation
+        if let ref = playQueueRef {
+            PlexWatchClient.shared.saveCredentials(serverUrl: ref.plexServerUrl, token: ref.plexToken)
+        } else if let first = queueData.first,
+                  let streamUrl = first["streamUrl"] as? String,
+                  let token = first["plexToken"] as? String,
+                  let url = URL(string: streamUrl),
+                  let scheme = url.scheme, let host = url.host {
+            let port = url.port.map { ":\($0)" } ?? ""
+            PlexWatchClient.shared.saveCredentials(serverUrl: "\(scheme)://\(host)\(port)", token: token)
+        }
+
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
+
             let items = queueData.map { QueueItem(from: $0) }
-            
+
             if !items.isEmpty {
                 self.hasLocalQueue = true
                 self.isPlayingLocally = true
