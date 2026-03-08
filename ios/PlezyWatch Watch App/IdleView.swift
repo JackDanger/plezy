@@ -204,7 +204,8 @@ struct IdleView: View {
             case .album, .artist:
                 result = await client.createPlayAllQueue(ratingKey: item.ratingKey)
             case .station:
-                result = await client.createRadioStation(ratingKey: item.ratingKey)
+                let (radioResult, _) = await client.createRadioStation(ratingKey: item.ratingKey)
+                result = radioResult
             }
 
             guard let result = result else {

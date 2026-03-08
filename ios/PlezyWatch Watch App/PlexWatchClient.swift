@@ -155,6 +155,8 @@ class PlexWatchClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(clientIdentifier, forHTTPHeaderField: "X-Plex-Client-Identifier")
+        request.setValue("Plezy", forHTTPHeaderField: "X-Plex-Product")
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -190,6 +192,16 @@ class PlexWatchClient {
         return results
     }
 
+    /// Plex client identifier for API requests
+    private var clientIdentifier: String {
+        if let stored = UserDefaults.standard.string(forKey: "plexClientId") {
+            return stored
+        }
+        let id = "plezy-watch-\(UUID().uuidString.prefix(8))"
+        UserDefaults.standard.set(id, forKey: "plexClientId")
+        return id
+    }
+
     /// Create a play queue from a track/album/artist URI
     func createPlayQueue(uri: String, shuffle: Bool = false, continuous: Bool = false) async -> PlayQueueResult? {
         guard let creds = credentials else {
@@ -208,13 +220,18 @@ class PlexWatchClient {
         components?.queryItems = queryItems
 
         guard let url = components?.url else {
-            print("[PlexWatch] Failed to build play queue URL")
+            print("[PlexWatch] Failed to build play queue URL from: \(creds.serverUrl)/playQueues")
             return nil
         }
+
+        print("[PlexWatch] POST \(url)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue(clientIdentifier, forHTTPHeaderField: "X-Plex-Client-Identifier")
+        request.setValue("Plezy", forHTTPHeaderField: "X-Plex-Product")
+        request.setValue("Watch", forHTTPHeaderField: "X-Plex-Device")
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -243,19 +260,28 @@ class PlexWatchClient {
     }
 
     /// Create a radio station from a track/album/artist
-    func createRadioStation(ratingKey: String) async -> PlayQueueResult? {
+    /// Returns (result, errorDetail) — errorDetail is non-nil on failure for UI display
+    func createRadioStation(ratingKey: String) async -> (PlayQueueResult?, String?) {
         print("[PlexWatch] createRadioStation: ratingKey=\(ratingKey), hasCredentials=\(hasCredentials)")
+
+        guard hasCredentials else {
+            return (nil, "No credentials")
+        }
+
         let machineId = await fetchMachineIdentifier()
         guard let machineId else {
-            print("[PlexWatch] createRadioStation: FAILED - no machine identifier")
-            return nil
+            return (nil, "Can't reach server (/identity failed)")
         }
 
         let uri = "server://\(machineId)/com.plexapp.plugins.library/library/metadata/\(ratingKey)/station"
         print("[PlexWatch] createRadioStation: uri=\(uri)")
         let result = await createPlayQueue(uri: uri, shuffle: true, continuous: true)
-        print("[PlexWatch] createRadioStation: result=\(result != nil ? "\(result!.items.count) items, queueId=\(result!.playQueueId)" : "nil")")
-        return result
+        if let result {
+            print("[PlexWatch] createRadioStation: \(result.items.count) items, queueId=\(result.playQueueId)")
+            return (result, nil)
+        } else {
+            return (nil, "Server rejected radio request")
+        }
     }
 
     /// Create a play queue for an album or artist (play all tracks)

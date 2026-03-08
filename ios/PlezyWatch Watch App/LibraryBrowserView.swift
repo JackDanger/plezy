@@ -224,8 +224,9 @@ struct ArtistDetailView: View {
         errorMessage = nil
         Task {
             let client = PlexWatchClient.shared
-            guard let result = await client.createRadioStation(ratingKey: artist.ratingKey) else {
-                await MainActor.run { errorMessage = "Failed to create radio station"; isActioning = false }
+            let (radioResult, radioError) = await client.createRadioStation(ratingKey: artist.ratingKey)
+            guard let result = radioResult else {
+                await MainActor.run { errorMessage = "Radio failed: \(radioError ?? "unknown")"; isActioning = false }
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
