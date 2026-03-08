@@ -84,6 +84,8 @@ class WatchConnectivityService {
   Function()? onNext;
   Function()? onPrevious;
   Function()? onTransferToWatch;
+  Function()? onVolumeUp;
+  Function()? onVolumeDown;
 
   // Queue provider callback - called when watch requests queue transfer
   // Returns (playQueueReference, previewItems) - preference is to use play queue reference
@@ -118,6 +120,8 @@ class WatchConnectivityService {
         appLogger.d('[Watch] Command from watch: $command');
         await _handleCommand(command);
         break;
+      case 'getCredentials':
+        return _getCredentials();
     }
   }
 
@@ -143,7 +147,25 @@ class WatchConnectivityService {
         appLogger.d('[Watch] Transfer to watch requested');
         await _handleTransferToWatch();
         break;
+      case 'volumeUp':
+        appLogger.d('[Watch] Volume up requested');
+        onVolumeUp?.call();
+        break;
+      case 'volumeDown':
+        appLogger.d('[Watch] Volume down requested');
+        onVolumeDown?.call();
+        break;
     }
+  }
+
+  Map<String, String>? _getCredentials() {
+    if (_client != null && _client!.authToken != null) {
+      return {
+        'serverUrl': _client!.config.baseUrl,
+        'token': _client!.authToken!,
+      };
+    }
+    return null;
   }
 
   Future<void> _handleTransferToWatch() async {
@@ -204,6 +226,8 @@ class WatchConnectivityService {
     Uint8List? albumArt,
     bool canGoNext = true,
     bool canGoPrevious = true,
+    double? position,
+    double? duration,
   }) async {
     if (!Platform.isIOS) return;
 
@@ -218,6 +242,12 @@ class WatchConnectivityService {
 
       if (albumArt != null) {
         state['albumArt'] = albumArt;
+      }
+      if (position != null) {
+        state['position'] = position;
+      }
+      if (duration != null) {
+        state['duration'] = duration;
       }
 
       await _channel.invokeMethod('updatePlaybackState', state);
@@ -365,5 +395,7 @@ class WatchConnectivityService {
     onPrevious = null;
     onTransferToWatch = null;
     onRequestQueue = null;
+    onVolumeUp = null;
+    onVolumeDown = null;
   }
 }

@@ -27,6 +27,8 @@ class WatchConnectivityProvider with ChangeNotifier {
     _service.onPrevious = _handlePrevious;
     _service.onTransferToWatch = _handleTransferToWatch;
     _service.onRequestQueue = _getQueueForWatch;
+    _service.onVolumeUp = _handleVolumeUp;
+    _service.onVolumeDown = _handleVolumeDown;
     
     appLogger.d('[WatchProvider] Initialized');
   }
@@ -36,6 +38,8 @@ class WatchConnectivityProvider with ChangeNotifier {
   VoidCallback? onPauseRequested;
   VoidCallback? onNextRequested;
   VoidCallback? onPreviousRequested;
+  VoidCallback? onVolumeUpRequested;
+  VoidCallback? onVolumeDownRequested;
   
   /// Set the Plex client for building URLs
   void setClient(PlexClient? client) {
@@ -63,10 +67,12 @@ class WatchConnectivityProvider with ChangeNotifier {
     Uint8List? albumArt,
     bool canGoNext = true,
     bool canGoPrevious = true,
+    double? position,
+    double? duration,
   }) async {
     _isPlaying = isPlaying;
     _currentMetadata = metadata;
-    
+
     await _service.updatePlaybackState(
       isPlaying: isPlaying,
       title: metadata.title,
@@ -74,6 +80,8 @@ class WatchConnectivityProvider with ChangeNotifier {
       albumArt: albumArt,
       canGoNext: canGoNext,
       canGoPrevious: canGoPrevious,
+      position: position,
+      duration: duration,
     );
   }
   
@@ -111,6 +119,16 @@ class WatchConnectivityProvider with ChangeNotifier {
     onPreviousRequested?.call();
   }
   
+  void _handleVolumeUp() {
+    appLogger.d('[WatchProvider] Volume up requested');
+    onVolumeUpRequested?.call();
+  }
+
+  void _handleVolumeDown() {
+    appLogger.d('[WatchProvider] Volume down requested');
+    onVolumeDownRequested?.call();
+  }
+
   void _handleTransferToWatch() {
     print('[WATCH-PROVIDER] Transfer to watch requested!');
     appLogger.d('[WatchProvider] Transfer to watch requested');
