@@ -301,12 +301,23 @@ class PlexWatchClient {
         return "\(creds.serverUrl)\(partKey)?X-Plex-Token=\(creds.token)"
     }
 
-    /// Build a stream URL for a track using its rating key (universal transcoding)
+    /// Fetch the partKey for a track by loading its full metadata
     /// Used when Media/Part data is not available (e.g. radio station responses)
-    func transcodingStreamUrl(ratingKey: String) -> String? {
-        guard let creds = credentials else { return nil }
-        let encodedPath = "/library/metadata/\(ratingKey)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "/library/metadata/\(ratingKey)"
-        return "\(creds.serverUrl)/music/:/transcode/universal/start.mp3?path=\(encodedPath)&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Client-Identifier=\(clientIdentifier)&X-Plex-Token=\(creds.token)"
+    func fetchPartKey(ratingKey: String) async -> String? {
+        guard let json = await get("/library/metadata/\(ratingKey)") else {
+            print("[PlexWatch] fetchPartKey(\(ratingKey)): request failed")
+            return nil
+        }
+        guard let container = json["MediaContainer"] as? [String: Any],
+              let metadata = container["Metadata"] as? [[String: Any]],
+              let track = metadata.first,
+              let media = (track["Media"] as? [[String: Any]])?.first,
+              let part = (media["Part"] as? [[String: Any]])?.first,
+              let partKey = part["key"] as? String else {
+            print("[PlexWatch] fetchPartKey(\(ratingKey)): no partKey in response")
+            return nil
+        }
+        return partKey
     }
 
     /// Build a thumbnail URL
@@ -422,16 +433,30 @@ struct MusicItem: Identifiable {
         return nil
     }
 
-    /// Convert to a QueueItem for playback
+    /// Convert to a QueueItem for playback (sync — requires partKey to already be present)
     func toQueueItem(client: PlexWatchClient) -> QueueItem? {
-        // Try direct stream URL first (from Media/Part data), fall back to transcoding URL
-        let streamUrl: String?
-        if let partKey {
-            streamUrl = client.streamUrl(partKey: partKey)
-        } else {
-            streamUrl = client.transcodingStreamUrl(ratingKey: ratingKey)
+        guard let partKey, let streamUrl = client.streamUrl(partKey: partKey) else { return nil }
+        guard let token = client.credentials?.token else { return nil }
+        return QueueItem(from: [
+            "id": ratingKey,
+            "title": title,
+            "artist": artist as Any,
+            "albumArtUrl": client.thumbnailUrl(thumb) as Any,
+            "streamUrl": streamUrl,
+            "plexToken": token,
+            "duration": durationSeconds,
+        ])
+    }
+
+    /// Convert to a QueueItem, fetching partKey from server if missing
+    func toQueueItemAsync(client: PlexWatchClient) async -> QueueItem? {
+        // If we already have a partKey, use it directly
+        if let result = toQueueItem(client: client) {
+            return result
         }
-        guard let streamUrl else { return nil }
+        // Fetch full metadata to get the partKey
+        guard let fetchedPartKey = await client.fetchPartKey(ratingKey: ratingKey) else { return nil }
+        guard let streamUrl = client.streamUrl(partKey: fetchedPartKey) else { return nil }
         guard let token = client.credentials?.token else { return nil }
         return QueueItem(from: [
             "id": ratingKey,
@@ -448,6 +473,17 @@ struct MusicItem: Identifiable {
 struct PlayQueueResult {
     let playQueueId: Int
     let items: [MusicItem]
+
+    /// Convert all items to QueueItems, fetching partKeys as needed
+    func toQueueItems(client: PlexWatchClient) async -> [QueueItem] {
+        var queueItems: [QueueItem] = []
+        for item in items {
+            if let qi = await item.toQueueItemAsync(client: client) {
+                queueItems.append(qi)
+            }
+        }
+        return queueItems
+    }
 
     /// Build a PlayQueueReference from this result for queue refreshing
     func toQueueReference(client: PlexWatchClient) -> PlayQueueReference? {

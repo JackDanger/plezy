@@ -213,7 +213,7 @@ struct IdleView: View {
                 return
             }
 
-            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            let queueItems = await result.toQueueItems(client: client)
             if !queueItems.isEmpty {
                 // For radio stations, store the queue ref so we can fetch more tracks
                 let queueRef = (item.type == .station) ? result.toQueueReference(client: client) : nil

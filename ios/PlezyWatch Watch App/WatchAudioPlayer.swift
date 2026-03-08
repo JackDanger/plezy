@@ -299,31 +299,32 @@ class WatchAudioPlayer: NSObject, ObservableObject {
             let existingIds = Set(queue.map { $0.id })
             let audioTypes: Set<String> = ["track"]
 
-            return metadata.compactMap { item -> QueueItem? in
+            var newItems: [QueueItem] = []
+            for item in metadata {
                 let itemType = item["type"] as? String ?? ""
-                guard audioTypes.contains(itemType) else { return nil }
-                guard let key = item["ratingKey"] as? String else { return nil }
-                // Skip tracks we already have
-                guard !existingIds.contains(key) else { return nil }
-                guard let title = item["title"] as? String else { return nil }
+                guard audioTypes.contains(itemType) else { continue }
+                guard let key = item["ratingKey"] as? String else { continue }
+                guard !existingIds.contains(key) else { continue }
+                guard let title = item["title"] as? String else { continue }
 
-                // Try direct stream URL from Media/Part, fall back to transcoding
-                let streamUrl: String
+                // Try direct stream URL from Media/Part, fall back to fetching partKey
+                var partKey: String?
                 if let media = (item["Media"] as? [[String: Any]])?.first,
-                   let part = (media["Part"] as? [[String: Any]])?.first,
-                   let partKey = part["key"] as? String {
-                    streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
-                } else {
-                    let encodedPath = "/library/metadata/\(key)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "/library/metadata/\(key)"
-                    let clientId = PlexWatchClient.shared.clientIdentifier
-                    streamUrl = "\(ref.plexServerUrl)/music/:/transcode/universal/start.mp3?path=\(encodedPath)&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Client-Identifier=\(clientId)&X-Plex-Token=\(ref.plexToken)"
+                   let part = (media["Part"] as? [[String: Any]])?.first {
+                    partKey = part["key"] as? String
                 }
+                if partKey == nil {
+                    partKey = await PlexWatchClient.shared.fetchPartKey(ratingKey: key)
+                }
+                guard let partKey else { continue }
+                let streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
+
                 var albumArtUrl: String?
                 if let thumb = item["thumb"] as? String {
                     albumArtUrl = "\(ref.plexServerUrl)\(thumb)?X-Plex-Token=\(ref.plexToken)"
                 }
 
-                return QueueItem(from: [
+                if let qi = QueueItem(from: [
                     "id": key,
                     "title": title,
                     "artist": item["grandparentTitle"] ?? item["parentTitle"] ?? "",
@@ -331,8 +332,11 @@ class WatchAudioPlayer: NSObject, ObservableObject {
                     "streamUrl": streamUrl,
                     "plexToken": ref.plexToken,
                     "duration": (item["duration"] as? Double ?? 0) / 1000.0
-                ])
+                ]) {
+                    newItems.append(qi)
+                }
             }
+            return newItems
         } catch {
             print("[WatchAudio] Error fetching additional tracks: \(error)")
             return []
@@ -396,36 +400,35 @@ class WatchAudioPlayer: NSObject, ObservableObject {
 
             // Convert metadata to QueueItems, filtering out video content
             let audioTypes: Set<String> = ["track"]
-            let items = metadata.compactMap { item -> QueueItem? in
-                // Skip non-audio items (movies, episodes, clips)
+            var items: [QueueItem] = []
+            for item in metadata {
                 let itemType = item["type"] as? String ?? ""
-                if !audioTypes.contains(itemType) {
+                guard audioTypes.contains(itemType) else {
                     print("[WatchAudio] Skipping non-audio item: \(item["title"] ?? "?") (type: \(itemType))")
-                    return nil
+                    continue
                 }
 
                 guard let key = item["ratingKey"] as? String,
-                      let title = item["title"] as? String else { return nil }
+                      let title = item["title"] as? String else { continue }
 
-                // Build stream URL — try direct, fall back to transcoding
-                let streamUrl: String
+                // Build stream URL — try direct, fall back to fetching partKey
+                var partKey: String?
                 if let media = (item["Media"] as? [[String: Any]])?.first,
-                   let part = (media["Part"] as? [[String: Any]])?.first,
-                   let partKey = part["key"] as? String {
-                    streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
-                } else {
-                    let encodedPath = "/library/metadata/\(key)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "/library/metadata/\(key)"
-                    let clientId = PlexWatchClient.shared.clientIdentifier
-                    streamUrl = "\(ref.plexServerUrl)/music/:/transcode/universal/start.mp3?path=\(encodedPath)&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Client-Identifier=\(clientId)&X-Plex-Token=\(ref.plexToken)"
+                   let part = (media["Part"] as? [[String: Any]])?.first {
+                    partKey = part["key"] as? String
                 }
+                if partKey == nil {
+                    partKey = await PlexWatchClient.shared.fetchPartKey(ratingKey: key)
+                }
+                guard let partKey else { continue }
+                let streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
 
-                // Get album art URL
                 var albumArtUrl: String?
                 if let thumb = item["thumb"] as? String {
                     albumArtUrl = "\(ref.plexServerUrl)\(thumb)?X-Plex-Token=\(ref.plexToken)"
                 }
 
-                return QueueItem(from: [
+                if let qi = QueueItem(from: [
                     "id": key,
                     "title": title,
                     "artist": item["grandparentTitle"] ?? item["parentTitle"] ?? "",
@@ -433,7 +436,9 @@ class WatchAudioPlayer: NSObject, ObservableObject {
                     "streamUrl": streamUrl,
                     "plexToken": ref.plexToken,
                     "duration": (item["duration"] as? Double ?? 0) / 1000.0
-                ])
+                ]) {
+                    items.append(qi)
+                }
             }
 
             if !items.isEmpty {

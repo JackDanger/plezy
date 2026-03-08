@@ -174,7 +174,7 @@ struct MainPlaybackPage: View {
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
-            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            let queueItems = await result.toQueueItems(client: client)
             if !queueItems.isEmpty {
                 let queueRef = result.toQueueReference(client: client)
                 await MainActor.run {
