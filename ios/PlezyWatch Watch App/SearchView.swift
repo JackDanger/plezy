@@ -10,20 +10,34 @@ struct SearchView: View {
 
     var body: some View {
         List {
-            if isSearching {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                    Spacer()
+            // Search field always visible at top
+            Section {
+                TextField("Search", text: $searchText)
+                    .onSubmit { performSearch() }
+
+                if !searchText.isEmpty {
+                    Button(action: { performSearch() }) {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
                 }
-                .listRowBackground(Color.clear)
-            } else if results.isEmpty && hasSearched {
-                Text("No results")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+            }
+
+            if isSearching {
+                Section {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
                     .listRowBackground(Color.clear)
+                }
+            } else if results.isEmpty && hasSearched {
+                Section {
+                    Text("No results found")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
             } else {
-                // Group results by type
                 let artists = results.filter { $0.isArtist }
                 let albums = results.filter { $0.isAlbum }
                 let tracks = results.filter { $0.isTrack }
@@ -101,8 +115,6 @@ struct SearchView: View {
                 }
             }
         }
-        .searchable(text: $searchText, prompt: "Artists, albums, songs")
-        .onSubmit(of: .search) { performSearch() }
         .navigationTitle("Search")
     }
 
