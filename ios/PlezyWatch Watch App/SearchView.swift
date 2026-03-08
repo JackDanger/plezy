@@ -7,6 +7,7 @@ struct SearchView: View {
     @State private var isSearching = false
     @State private var hasSearched = false
     @State private var errorMessage: String?
+    @FocusState private var isSearchFocused: Bool
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
@@ -14,6 +15,7 @@ struct SearchView: View {
             // Search field always visible at top
             Section {
                 TextField("Search", text: $searchText)
+                    .focused($isSearchFocused)
                     .onSubmit { performSearch() }
 
                 if !searchText.isEmpty {
@@ -125,6 +127,7 @@ struct SearchView: View {
             }
         }
         .navigationTitle("Search")
+        .onAppear { isSearchFocused = true }
     }
 
     private func performSearch() {
