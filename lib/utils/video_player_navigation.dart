@@ -145,6 +145,8 @@ Future<bool?> navigateToVideoPlayer(
 Future<bool?> navigateToAudioPlayer(
   BuildContext context, {
   required PlexMetadata metadata,
+  List<PlexMetadata>? queue,
+  int startIndex = 0,
   bool usePushReplacement = false,
 }) async {
   final navigator = Navigator.of(context);
@@ -152,6 +154,8 @@ Future<bool?> navigateToAudioPlayer(
   final route = PageRouteBuilder<bool>(
     pageBuilder: (context, animation, secondaryAnimation) => AudioPlayerScreen(
       metadata: metadata,
+      queue: queue,
+      startIndex: startIndex,
     ),
     transitionDuration: Duration.zero,
     reverseTransitionDuration: Duration.zero,

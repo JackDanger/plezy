@@ -209,9 +209,12 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
   Future<void> _resumePlayback() async {
     final resumeTrack = _getResumeTrack();
     if (resumeTrack != null) {
+      final startIndex = _tracks.indexOf(resumeTrack);
       await navigateToAudioPlayer(
         context,
         metadata: resumeTrack,
+        queue: _tracks,
+        startIndex: startIndex >= 0 ? startIndex : 0,
       );
       // Refresh tracks when returning from audio player
       _loadTracks();
@@ -220,6 +223,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
       await navigateToAudioPlayer(
         context,
         metadata: _tracks.first,
+        queue: _tracks,
+        startIndex: 0,
       );
       _loadTracks();
     }
@@ -389,6 +394,8 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                               await navigateToAudioPlayer(
                                 context,
                                 metadata: track,
+                                queue: _tracks,
+                                startIndex: index,
                               );
                               // Refresh tracks when returning from audio player
                               _loadTracks();

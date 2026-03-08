@@ -25,10 +25,14 @@ import '../widgets/video_controls/icons.dart';
 
 class AudioPlayerScreen extends StatefulWidget {
   final PlexMetadata metadata;
+  final List<PlexMetadata>? queue;
+  final int startIndex;
 
   const AudioPlayerScreen({
     super.key,
     required this.metadata,
+    this.queue,
+    this.startIndex = 0,
   });
 
   @override
@@ -50,6 +54,14 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
   PlexMediaInfo? _mediaInfo;
   PlexLibrary? _sourceLibrary; // Cache the library this track belongs to
 
+  // Queue support
+  late List<PlexMetadata> _queue;
+  late int _currentIndex;
+
+  PlexMetadata get _currentMetadata => _queue[_currentIndex];
+  bool get _hasNext => _currentIndex < _queue.length - 1;
+  bool get _hasPrevious => _currentIndex > 0;
+
   StreamSubscription<bool>? _playingSubscription;
   StreamSubscription<Duration>? _positionSubscription;
   StreamSubscription<Duration>? _durationSubscription;
@@ -62,13 +74,15 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 
   /// Get the correct PlexClient for this metadata's server
   PlexClient _getClientForMetadata(BuildContext context) {
-    return context.getClientForServer(widget.metadata.serverId!);
+    return context.getClientForServer(_currentMetadata.serverId!);
   }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _queue = widget.queue ?? [widget.metadata];
+    _currentIndex = widget.startIndex.clamp(0, _queue.length - 1);
     _loadFullMetadata();
     _initializePlayer();
   }
@@ -96,13 +110,13 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     try {
       final client = _getClientForMetadata(context);
       final metadata = await client.getMetadataWithImages(
-        widget.metadata.ratingKey,
+        _currentMetadata.ratingKey,
       );
 
       if (metadata != null) {
         final metadataWithServerId = metadata.copyWith(
-          serverId: widget.metadata.serverId,
-          serverName: widget.metadata.serverName,
+          serverId: _currentMetadata.serverId,
+          serverName: _currentMetadata.serverName,
         );
 
         setState(() {
@@ -111,13 +125,13 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
         });
       } else {
         setState(() {
-          _fullMetadata = widget.metadata;
+          _fullMetadata = _currentMetadata;
           _isLoadingMetadata = false;
         });
       }
     } catch (e) {
       setState(() {
-        _fullMetadata = widget.metadata;
+        _fullMetadata = _currentMetadata;
         _isLoadingMetadata = false;
       });
     }
@@ -138,7 +152,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
       await player!.setProperty('ytdl', 'no');
       await player!.setProperty('prefetch-playlist', 'no');
       await player!.setProperty('load-scripts', 'no');
-      await player!.setProperty('demuxer-max-bytes', '${bufferSizeMB * 1024 * 1024}');
+      if (bufferSizeMB > 0) {
+        await player!.setProperty('demuxer-max-bytes', '${bufferSizeMB * 1024 * 1024}');
+      }
 
       // Apply saved volume
       final savedVolume = settingsService.getVolume();
@@ -152,19 +168,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
         });
       }
 
-      // Start playback
-      await _startPlayback();
-
-      // Load source library for audiobook detection
-      _loadSourceLibrary();
-
-      // Load chapters
-      _loadChapters();
-
-      // Set up media controls
-      await _setupMediaControls();
-
-      // Listen to playback state changes
+      // Listen to playback state changes (before starting playback to catch all events)
       _playingSubscription = player!.streams.playing.listen((playing) {
         if (mounted) {
           setState(() {
@@ -200,11 +204,32 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
         }
       });
 
+      // Start playback
+      await _startPlayback();
+
+      // Sync initial state from player (in case events were missed)
+      if (mounted) {
+        setState(() {
+          _isPlaying = player!.state.playing;
+          _position = player!.state.position;
+          _duration = player!.state.duration;
+        });
+      }
+
+      // Load source library for audiobook detection
+      _loadSourceLibrary();
+
+      // Load chapters
+      _loadChapters();
+
+      // Set up media controls
+      await _setupMediaControls();
+
       // Start progress tracking
       final client = _getClientForMetadata(context);
       _progressTracker = PlaybackProgressTracker(
         client: client,
-        metadata: _fullMetadata ?? widget.metadata,
+        metadata: _fullMetadata ?? _currentMetadata,
         player: player!,
       );
       _progressTracker!.startTracking();
@@ -228,7 +253,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
       );
 
       final result = await initializationService.startPlayback(
-        metadata: _fullMetadata ?? widget.metadata,
+        metadata: _fullMetadata ?? _currentMetadata,
       );
 
       // Store media info for chapters
@@ -251,7 +276,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     try {
       final client = _getClientForMetadata(context);
       final chapters = await client.getChapters(
-        (_fullMetadata ?? widget.metadata).ratingKey,
+        (_fullMetadata ?? _currentMetadata).ratingKey,
       );
       if (mounted) {
         setState(() {
@@ -281,7 +306,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 
     // Fallback: use duration heuristic (long tracks > 30 minutes)
     // This is less reliable but better than nothing when library info isn't available
-    final metadata = _fullMetadata ?? widget.metadata;
+    final metadata = _fullMetadata ?? _currentMetadata;
     final duration = metadata.duration;
     return duration != null && duration > 30 * 60 * 1000; // 30 minutes
   }
@@ -289,7 +314,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
   /// Load the source library for this track if available.
   /// This enables accurate audiobook detection based on library metadata.
   Future<void> _loadSourceLibrary() async {
-    final metadata = _fullMetadata ?? widget.metadata;
+    final metadata = _fullMetadata ?? _currentMetadata;
     if (metadata.librarySectionID == null) return;
 
     try {
@@ -463,18 +488,18 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
 
     // Update media metadata
     await _mediaControlsManager!.updateMetadata(
-      metadata: _fullMetadata ?? widget.metadata,
+      metadata: _fullMetadata ?? _currentMetadata,
       client: client,
-      duration: widget.metadata.duration != null
-          ? Duration(milliseconds: widget.metadata.duration!)
+      duration: _currentMetadata.duration != null
+          ? Duration(milliseconds: _currentMetadata.duration!)
           : null,
     );
 
     if (!mounted) return;
 
     await _mediaControlsManager!.setControlsEnabled(
-      canGoNext: false,
-      canGoPrevious: false,
+      canGoNext: _hasNext,
+      canGoPrevious: _hasPrevious,
     );
 
     // Listen to playing state and update media controls
@@ -504,11 +529,58 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
     // Mark as played and send final progress
     _progressTracker?.sendProgress('stopped');
     _progressTracker?.stopTracking();
-    
-    // Navigate back
-    if (mounted) {
-      Navigator.pop(context, true);
+
+    if (_hasNext) {
+      _playTrack(_currentIndex + 1);
+    } else {
+      // End of queue — navigate back
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     }
+  }
+
+  Future<void> _playTrack(int index) async {
+    if (index < 0 || index >= _queue.length) return;
+
+    _progressTracker?.sendProgress('stopped');
+    _progressTracker?.stopTracking();
+
+    setState(() {
+      _currentIndex = index;
+      _fullMetadata = null;
+      _isLoadingMetadata = true;
+      _chapters = [];
+      _chaptersLoaded = false;
+      _mediaInfo = null;
+      _position = Duration.zero;
+      _duration = Duration.zero;
+    });
+
+    await _loadFullMetadata();
+    await _startPlayback();
+
+    // Sync state after playback starts
+    if (mounted) {
+      setState(() {
+        _isPlaying = player!.state.playing;
+        _position = player!.state.position;
+        _duration = player!.state.duration;
+      });
+    }
+
+    _loadSourceLibrary();
+    _loadChapters();
+    await _setupMediaControls();
+
+    // Update progress tracker for new track
+    final client = _getClientForMetadata(context);
+    _progressTracker = PlaybackProgressTracker(
+      client: client,
+      metadata: _fullMetadata ?? _currentMetadata,
+      player: player!,
+    );
+    _progressTracker!.startTracking();
   }
 
   @override
@@ -527,7 +599,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
         child: CustomScrollView(
           slivers: [
             CustomAppBar(
-              title: Text(_fullMetadata?.title ?? widget.metadata.title),
+              title: Text(_fullMetadata?.title ?? _currentMetadata.title),
               pinned: true,
               onBackPressed: () => Navigator.pop(context),
             ),
@@ -589,7 +661,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                         const SizedBox(height: 32),
                         // Track info
                         Text(
-                          _fullMetadata?.title ?? widget.metadata.title,
+                          _fullMetadata?.title ?? _currentMetadata.title,
                           style: theme.textTheme.headlineMedium,
                           textAlign: TextAlign.center,
                         ),
@@ -601,6 +673,15 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                               color: theme.disabledColor,
                             ),
                             textAlign: TextAlign.center,
+                          ),
+                        ],
+                        if (_queue.length > 1) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${_currentIndex + 1} of ${_queue.length}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.disabledColor,
+                            ),
                           ),
                         ],
                         const SizedBox(height: 32),
@@ -766,6 +847,15 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                               iconSize: 32,
                             ),
                             const SizedBox(width: 16),
+                            // Previous track
+                            if (_queue.length > 1)
+                              IconButton(
+                                icon: const Icon(Icons.skip_previous),
+                                onPressed: _hasPrevious
+                                    ? () => _playTrack(_currentIndex - 1)
+                                    : null,
+                                iconSize: 40,
+                              ),
                             // Play/Pause
                             StreamBuilder<bool>(
                               stream: player?.streams.playing,
@@ -786,6 +876,15 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen>
                                 );
                               },
                             ),
+                            // Next track
+                            if (_queue.length > 1)
+                              IconButton(
+                                icon: const Icon(Icons.skip_next),
+                                onPressed: _hasNext
+                                    ? () => _playTrack(_currentIndex + 1)
+                                    : null,
+                                iconSize: 40,
+                              ),
                             const SizedBox(width: 16),
                             // Volume up
                             IconButton(
