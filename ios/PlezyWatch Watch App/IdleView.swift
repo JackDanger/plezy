@@ -6,6 +6,9 @@ struct IdleView: View {
     @StateObject private var audioPlayer = WatchAudioPlayer.shared
     @StateObject private var recentlyPlayed = RecentlyPlayedManager.shared
     @State private var hasCredentials = PlexWatchClient.shared.hasCredentials
+    @State private var searchQuery: String?
+    @State private var showSearchResults = false
+    @State private var showSearchInput = false
 
     var body: some View {
         NavigationStack {
@@ -34,6 +37,15 @@ struct IdleView: View {
                 }
             }
             .navigationTitle("Plezy")
+            .navigationDestination(isPresented: $showSearchResults) {
+                SearchResultsView(query: searchQuery ?? "")
+            }
+            .sheet(isPresented: $showSearchInput) {
+                SearchInputSheet { query in
+                    searchQuery = query
+                    showSearchResults = true
+                }
+            }
         }
         .onReceive(connectivity.objectWillChange) { _ in
             // Re-check credentials when connectivity state changes
@@ -86,7 +98,7 @@ struct IdleView: View {
             NavigationLink(destination: LibraryBrowserView()) {
                 Label("Library", systemImage: "music.note.list")
             }
-            NavigationLink(destination: SearchView()) {
+            Button(action: { showSearchInput = true }) {
                 Label("Search", systemImage: "magnifyingglass")
             }
             NavigationLink(destination: DebugView()) {
@@ -217,7 +229,7 @@ struct IdleView: View {
                 return
             }
 
-            let queueItems = result.toQueueItems(client: client)
+            let queueItems = await result.toQueueItems(client: client)
             if !queueItems.isEmpty {
                 // For radio stations, store the queue ref so we can fetch more tracks
                 let queueRef = (item.type == .station) ? result.toQueueReference(client: client) : nil

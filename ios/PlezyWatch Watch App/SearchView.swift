@@ -1,13 +1,12 @@
 import SwiftUI
 import WatchKit
 
-struct SearchView: View {
-    @State private var searchText = ""
+/// Shows search results for a given query. Starts searching immediately on appear.
+struct SearchResultsView: View {
+    let query: String
     @State private var results: [MusicItem] = []
-    @State private var isSearching = false
-    @State private var hasSearched = false
+    @State private var isSearching = true
     @State private var errorMessage: String?
-    @State private var showTextInput = false
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
@@ -29,16 +28,10 @@ struct SearchView: View {
                     }
                     .listRowBackground(Color.clear)
                 }
-            } else if results.isEmpty && hasSearched {
+            } else if results.isEmpty {
                 Section {
                     Text("No results found")
                         .font(.body)
-                        .foregroundStyle(.secondary)
-                }
-            } else if !hasSearched {
-                Section {
-                    Text("Tap to search by voice or scribble")
-                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } else {
@@ -119,26 +112,14 @@ struct SearchView: View {
                 }
             }
         }
-        .navigationTitle(searchText.isEmpty ? "Search" : searchText)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button(action: { showTextInput = true }) {
-                    Image(systemName: "magnifyingglass")
-                }
-            }
-        }
-        .onAppear { showTextInput = true }
-        .sheet(isPresented: $showTextInput) {
-            TextInputView(text: $searchText, onSubmit: performSearch)
-        }
+        .navigationTitle(query)
+        .onAppear { performSearch() }
     }
 
     private func performSearch() {
-        guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         isSearching = true
-        hasSearched = true
         Task {
-            let items = await PlexWatchClient.shared.search(query: searchText)
+            let items = await PlexWatchClient.shared.search(query: query)
             await MainActor.run {
                 results = items
                 isSearching = false
@@ -157,7 +138,7 @@ struct SearchView: View {
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
-            let queueItems = result.toQueueItems(client: client)
+            let queueItems = await result.toQueueItems(client: client)
             if queueItems.isEmpty {
                 await MainActor.run { errorMessage = "No playable tracks" }
                 WKInterfaceDevice.current().play(.failure)
@@ -178,25 +159,24 @@ struct SearchView: View {
     }
 }
 
-/// Native watchOS text input using dictation/scribble
-struct TextInputView: View {
-    @Binding var text: String
-    var onSubmit: () -> Void
+/// Sheet that immediately presents a text field for dictation/scribble input
+struct SearchInputSheet: View {
+    var onSubmit: (String) -> Void
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 12) {
             TextField("Search", text: $text)
+                .focused($isFocused)
                 .onSubmit {
+                    guard !text.trimmingCharacters(in: .whitespaces).isEmpty else { return }
                     dismiss()
-                    onSubmit()
+                    onSubmit(text)
                 }
-            Button("Search") {
-                dismiss()
-                onSubmit()
-            }
-            .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
         }
         .padding()
+        .onAppear { isFocused = true }
     }
 }

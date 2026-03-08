@@ -300,30 +300,16 @@ class WatchAudioPlayer: NSObject, ObservableObject {
             let audioTypes: Set<String> = ["track"]
 
             let client = PlexWatchClient.shared
-            let newItems: [QueueItem] = metadata.compactMap { item in
+            // Parse into MusicItems first, then enrich with partKeys
+            let musicItems: [MusicItem] = metadata.compactMap { item in
                 let itemType = item["type"] as? String ?? ""
                 guard audioTypes.contains(itemType) else { return nil }
                 guard let key = item["ratingKey"] as? String else { return nil }
                 guard !existingIds.contains(key) else { return nil }
-                guard let title = item["title"] as? String else { return nil }
-                guard let streamUrl = client.streamUrl(ratingKey: key) else { return nil }
-
-                var albumArtUrl: String?
-                if let thumb = item["thumb"] as? String {
-                    albumArtUrl = client.thumbnailUrl(thumb)
-                }
-
-                return QueueItem(from: [
-                    "id": key,
-                    "title": title,
-                    "artist": item["grandparentTitle"] ?? item["parentTitle"] ?? "",
-                    "albumArtUrl": albumArtUrl as Any,
-                    "streamUrl": streamUrl,
-                    "plexToken": ref.plexToken,
-                    "duration": (item["duration"] as? Double ?? 0) / 1000.0
-                ])
+                return client.parseMusicItemPublic(item)
             }
-            return newItems
+            let enriched = await client.enrichWithPartKeys(musicItems)
+            return enriched.compactMap { $0.toQueueItem(client: client) }
         } catch {
             print("[WatchAudio] Error fetching additional tracks: \(error)")
             return []
@@ -385,39 +371,16 @@ class WatchAudioPlayer: NSObject, ObservableObject {
                 return false
             }
 
-            // Convert metadata to QueueItems, filtering out video content
+            // Convert metadata to MusicItems, enrich with partKeys, then to QueueItems
             let audioTypes: Set<String> = ["track"]
-            var items: [QueueItem] = []
-            for item in metadata {
+            let client = PlexWatchClient.shared
+            let musicItems: [MusicItem] = metadata.compactMap { item in
                 let itemType = item["type"] as? String ?? ""
-                guard audioTypes.contains(itemType) else {
-                    print("[WatchAudio] Skipping non-audio item: \(item["title"] ?? "?") (type: \(itemType))")
-                    continue
-                }
-
-                guard let key = item["ratingKey"] as? String,
-                      let title = item["title"] as? String else { continue }
-
-                let client = PlexWatchClient.shared
-                guard let streamUrl = client.streamUrl(ratingKey: key) else { continue }
-
-                var albumArtUrl: String?
-                if let thumb = item["thumb"] as? String {
-                    albumArtUrl = client.thumbnailUrl(thumb)
-                }
-
-                if let qi = QueueItem(from: [
-                    "id": key,
-                    "title": title,
-                    "artist": item["grandparentTitle"] ?? item["parentTitle"] ?? "",
-                    "albumArtUrl": albumArtUrl as Any,
-                    "streamUrl": streamUrl,
-                    "plexToken": ref.plexToken,
-                    "duration": (item["duration"] as? Double ?? 0) / 1000.0
-                ]) {
-                    items.append(qi)
-                }
+                guard audioTypes.contains(itemType) else { return nil }
+                return client.parseMusicItemPublic(item)
             }
+            let enriched = await client.enrichWithPartKeys(musicItems)
+            let items = enriched.compactMap { $0.toQueueItem(client: client) }
 
             if !items.isEmpty {
                 await MainActor.run {

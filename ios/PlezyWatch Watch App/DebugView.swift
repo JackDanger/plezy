@@ -108,8 +108,8 @@ struct DebugView: View {
             await MainActor.run { log("--- Radio test: \(artist.title) ---") }
             let (radioResult, radioError) = await client.createRadioStation(ratingKey: artist.ratingKey)
 
-            await MainActor.run {
-                if let result = radioResult {
+            if let result = radioResult {
+                await MainActor.run {
                     log("OK radio queue: \(result.playQueueId)")
                     log("   \(result.items.count) items from API")
                     for (i, item) in result.items.prefix(3).enumerated() {
@@ -118,20 +118,35 @@ struct DebugView: View {
                         log("      partKey=\(item.partKey ?? "nil")")
                         log("      type=\(item.type)")
                     }
+                }
 
-                    // 6. Test toQueueItem conversion
-                    let queueItems = result.toQueueItems(client: client)
+                // 6. Test enrichment + toQueueItem conversion
+                await MainActor.run { log("   Enriching with partKeys...") }
+                let queueItems = await result.toQueueItems(client: client)
+                await MainActor.run {
                     log("   \(queueItems.count) converted to QueueItem")
                     if let first = queueItems.first {
                         log("   streamUrl: \(first.streamUrl.prefix(80))...")
                     }
                     if queueItems.isEmpty && !result.items.isEmpty {
                         log("ERR toQueueItems returned 0!")
-                        log("   streamUrl test: \(client.streamUrl(ratingKey: artist.ratingKey) ?? "nil")")
                     }
-                } else {
-                    log("FAIL radio: \(radioError ?? "unknown")")
                 }
+
+                // 6b. Test single fetchPartKey
+                if let firstItem = result.items.first, firstItem.partKey == nil {
+                    await MainActor.run { log("   Testing fetchPartKey(\(firstItem.ratingKey))...") }
+                    let pk = await client.fetchPartKey(ratingKey: firstItem.ratingKey)
+                    await MainActor.run {
+                        if let pk {
+                            log("   OK partKey: \(pk.prefix(60))")
+                        } else {
+                            log("   ERR fetchPartKey returned nil")
+                        }
+                    }
+                }
+            } else {
+                await MainActor.run { log("FAIL radio: \(radioError ?? "unknown")") }
             }
 
             // 7. Test album playback path
@@ -140,17 +155,20 @@ struct DebugView: View {
                 await MainActor.run { log("--- Album test: \(album.title) ---") }
 
                 let albumResult = await client.createPlayAllQueue(ratingKey: album.ratingKey)
-                await MainActor.run {
-                    if let result = albumResult {
+                if let result = albumResult {
+                    await MainActor.run {
                         log("OK album queue: \(result.playQueueId)")
                         log("   \(result.items.count) items")
-                        let queueItems = result.toQueueItems(client: client)
+                    }
+                    let queueItems = await result.toQueueItems(client: client)
+                    await MainActor.run {
                         log("   \(queueItems.count) converted")
                         if let first = queueItems.first {
                             log("   url: \(first.streamUrl.prefix(80))...")
                         }
-                    } else {
-                        log("FAIL createPlayAllQueue")
+                    }
+                } else {
+                    await MainActor.run { log("FAIL createPlayAllQueue")
                     }
                 }
             }
