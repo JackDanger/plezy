@@ -28,7 +28,10 @@ cat > "$STAMP_FILE" << SWIFT
 import Foundation
 
 enum BuildInfo {
-    static let stamp = "$BUILD_STAMP"
+    static var stamp: String {
+        let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+        return "v\(v) $BUILD_STAMP"
+    }
 }
 SWIFT
 info "Build stamp: $BUILD_STAMP"
@@ -63,7 +66,23 @@ if [ -n "$WATCH_BUILD" ]; then
     info "Cleaned cached Watch app"
 fi
 
-# Step 6: Build via flutter (builds both iOS and Watch)
+# Step 6: Run Flutter analyze and tests
+info "Running flutter analyze..."
+if ! flutter analyze --no-pub 2>&1 | tail -3; then
+    fail "Flutter analyze found issues"
+fi
+
+info "Running flutter test..."
+if [ -d "$PROJECT_DIR/test" ]; then
+    if ! flutter test 2>&1 | tail -5; then
+        fail "Flutter tests failed"
+    fi
+    info "Tests passed ✓"
+else
+    info "No test directory — skipping tests"
+fi
+
+# Step 7: Build via flutter (builds both iOS and Watch)
 info "Building Flutter iOS app (release)..."
 flutter build ios --release 2>&1 | while IFS= read -r line; do
     case "$line" in
@@ -78,7 +97,7 @@ if [ ! -d "$APP_PATH" ]; then
     fail "Build failed — Runner.app not found at $APP_PATH"
 fi
 
-# Step 7: Verify Watch app is embedded and contains our build stamp
+# Step 8: Verify Watch app is embedded and contains our build stamp
 WATCH_APP="$APP_PATH/Watch/PlezyWatch Watch App.app"
 if [ ! -d "$WATCH_APP" ]; then
     warn "Watch app not found embedded in Runner.app!"
@@ -97,7 +116,7 @@ else
     fi
 fi
 
-# Step 8: Install to iPhone (Watch app syncs automatically)
+# Step 9: Install to iPhone (Watch app syncs automatically)
 info "Installing to $DEVICE_NAME..."
 if xcrun devicectl device install app --device "$DEVICE_ID" "$APP_PATH" 2>&1; then
     info "Installed on iPhone ✓"
@@ -105,7 +124,7 @@ else
     fail "Install failed. Is the device connected?"
 fi
 
-# Step 9: Launch the app
+# Step 10: Launch the app
 info "Launching Plezy..."
 xcrun devicectl device process launch --device "$DEVICE_ID" com.jackdanger.plezy 2>/dev/null || true
 
