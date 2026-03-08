@@ -22,6 +22,8 @@
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		767C0F0C5E07CA78AE932012 /* WatchAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7B2A6EAF2EE0AD444092962 /* WatchAudioPlayer.swift */; };
 		805E78D211C895AB1C1675B2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F54971BD391928779DBA03AF /* Foundation.framework */; };
+		D1A2B3C4E5F6A7B800112233 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6A7B800112234 /* WidgetKit.framework */; };
+		D1A2B3C4E5F6A7B800112235 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6A7B800112236 /* SwiftUI.framework */; };
 		8A0900D328663BDA55C82669 /* LibraryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19EBD77ED1AC18146C9A6C3 /* LibraryBrowserView.swift */; };
 		92F969587D0E464D999910F5 /* MpvPipController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92F969587D0E464D999910F4 /* MpvPipController.swift */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
@@ -127,6 +129,8 @@
 		E47D001958CEF9AEE4F83141 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EB57BADBEB3AE8725FA0DD44 /* PlexWatchClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlexWatchClient.swift; sourceTree = "<group>"; };
 		F54971BD391928779DBA03AF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		D1A2B3C4E5F6A7B800112234 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/WidgetKit.framework; sourceTree = DEVELOPER_DIR; };
+		D1A2B3C4E5F6A7B800112236 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
 		AA1B2C3D4E5F6A7B8C9D0E10 /* RecentlyPlayedManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentlyPlayedManager.swift; sourceTree = "<group>"; };
 		BB2C3D4E5F6A7B8C9D0E1F21 /* SetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
 		CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchImageCache.swift; sourceTree = "<group>"; };
@@ -157,6 +161,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				805E78D211C895AB1C1675B2 /* Foundation.framework in Frameworks */,
+				D1A2B3C4E5F6A7B800112233 /* WidgetKit.framework in Frameworks */,
+				D1A2B3C4E5F6A7B800112235 /* SwiftUI.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -220,6 +226,8 @@
 			isa = PBXGroup;
 			children = (
 				F54971BD391928779DBA03AF /* Foundation.framework */,
+				D1A2B3C4E5F6A7B800112234 /* WidgetKit.framework */,
+				D1A2B3C4E5F6A7B800112236 /* SwiftUI.framework */,
 			);
 			name = watchOS;
 			sourceTree = "<group>";

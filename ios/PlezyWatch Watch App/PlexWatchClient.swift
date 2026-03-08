@@ -162,12 +162,10 @@ class PlexWatchClient {
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let container = json["MediaContainer"] as? [String: Any] else { return nil }
 
-            guard let queueId = container["playQueueID"] as? Int, queueId > 0 else {
-                print("[PlexWatch] Create playlist queue: missing or invalid playQueueID")
-                return nil
-            }
+            let queueId = container["playQueueID"] as? Int ?? 0
             let metadata = container["Metadata"] as? [[String: Any]] ?? []
             let items = metadata.compactMap { parseMusicItem($0) }
+            print("[PlexWatch] Created playlist queue \(queueId) with \(items.count) items")
 
             return PlayQueueResult(playQueueId: queueId, items: items)
         } catch {
@@ -232,13 +230,10 @@ class PlexWatchClient {
                 return nil
             }
 
-            guard let queueId = container["playQueueID"] as? Int, queueId > 0 else {
-                print("[PlexWatch] Create queue: missing or invalid playQueueID")
-                return nil
-            }
+            let queueId = container["playQueueID"] as? Int ?? 0
             let metadata = container["Metadata"] as? [[String: Any]] ?? []
             let items = metadata.compactMap { parseMusicItem($0) }
-            print("[PlexWatch] Created queue \(queueId) with \(items.count) items")
+            print("[PlexWatch] Created queue \(queueId) with \(items.count) items (keys: \(Array(container.keys)))")
 
             return PlayQueueResult(playQueueId: queueId, items: items)
         } catch {
@@ -249,15 +244,18 @@ class PlexWatchClient {
 
     /// Create a radio station from a track/album/artist
     func createRadioStation(ratingKey: String) async -> PlayQueueResult? {
+        print("[PlexWatch] createRadioStation: ratingKey=\(ratingKey), hasCredentials=\(hasCredentials)")
         let machineId = await fetchMachineIdentifier()
         guard let machineId else {
-            print("[PlexWatch] No machine identifier for radio")
+            print("[PlexWatch] createRadioStation: FAILED - no machine identifier")
             return nil
         }
 
         let uri = "server://\(machineId)/com.plexapp.plugins.library/library/metadata/\(ratingKey)/station"
-        print("[PlexWatch] Creating radio station with uri: \(uri)")
-        return await createPlayQueue(uri: uri, shuffle: true, continuous: true)
+        print("[PlexWatch] createRadioStation: uri=\(uri)")
+        let result = await createPlayQueue(uri: uri, shuffle: true, continuous: true)
+        print("[PlexWatch] createRadioStation: result=\(result != nil ? "\(result!.items.count) items, queueId=\(result!.playQueueId)" : "nil")")
+        return result
     }
 
     /// Create a play queue for an album or artist (play all tracks)
