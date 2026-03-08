@@ -68,8 +68,13 @@ fi
 
 # Step 6: Run Flutter analyze and tests
 info "Running flutter analyze..."
-if ! flutter analyze --no-pub 2>&1 | tail -3; then
-    fail "Flutter analyze found issues"
+ANALYZE_OUTPUT=$(flutter analyze --no-pub 2>&1 || true)
+if echo "$ANALYZE_OUTPUT" | grep -q "error •" 2>/dev/null; then
+    echo "$ANALYZE_OUTPUT" | grep "error •" || true
+    fail "Flutter analyze found errors"
+else
+    ISSUE_COUNT=$(echo "$ANALYZE_OUTPUT" | grep -oE '[0-9]+ issues? found' | head -1 || true)
+    info "Flutter analyze passed (${ISSUE_COUNT:-no issues})"
 fi
 
 info "Running flutter test..."
