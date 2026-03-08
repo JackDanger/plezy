@@ -1,9 +1,10 @@
 import SwiftUI
+import WidgetKit
 
 @main
 struct PlezyWatchApp: App {
     @StateObject private var watchConnectivity = WatchConnectivityManager.shared
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -11,4 +12,3 @@ struct PlezyWatchApp: App {
         }
     }
 }
-

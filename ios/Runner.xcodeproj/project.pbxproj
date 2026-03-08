@@ -39,6 +39,7 @@
 		BB2C3D4E5F6A7B8C9D0E1F20 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2C3D4E5F6A7B8C9D0E1F21 /* SetupView.swift */; };
 		CC3D4E5F6A7B8C9D0E1F2031 /* WatchImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */; };
 		DD4E5F6A7B8C9D0E1F203142 /* plezy.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6A48DFAF2EA70C7100C1F7CD /* plezy.icon */; };
+		EE5F6A7B8C9D0E1F20314253 /* PlezyComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5F6A7B8C9D0E1F20314254 /* PlezyComplication.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -128,6 +129,7 @@
 		AA1B2C3D4E5F6A7B8C9D0E10 /* RecentlyPlayedManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentlyPlayedManager.swift; sourceTree = "<group>"; };
 		BB2C3D4E5F6A7B8C9D0E1F21 /* SetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
 		CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchImageCache.swift; sourceTree = "<group>"; };
+		EE5F6A7B8C9D0E1F20314254 /* PlezyComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlezyComplication.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -177,6 +179,7 @@
 				AA1B2C3D4E5F6A7B8C9D0E10 /* RecentlyPlayedManager.swift */,
 				BB2C3D4E5F6A7B8C9D0E1F21 /* SetupView.swift */,
 				CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */,
+				EE5F6A7B8C9D0E1F20314254 /* PlezyComplication.swift */,
 			);
 			path = "PlezyWatch Watch App";
 			sourceTree = "<group>";
@@ -549,6 +552,7 @@
 				AA1B2C3D4E5F6A7B8C9D0E1F /* RecentlyPlayedManager.swift in Sources */,
 				BB2C3D4E5F6A7B8C9D0E1F20 /* SetupView.swift in Sources */,
 				CC3D4E5F6A7B8C9D0E1F2031 /* WatchImageCache.swift in Sources */,
+				EE5F6A7B8C9D0E1F20314253 /* PlezyComplication.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
