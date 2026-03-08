@@ -5,7 +5,12 @@ import Foundation
 class PlexWatchClient {
     static let shared = PlexWatchClient()
 
-    private let session = URLSession.shared
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForResource = 30
+        return URLSession(configuration: config)
+    }()
     private let credentialsKey = "plexServerCredentials"
 
     struct Credentials: Codable {
@@ -305,6 +310,10 @@ class PlexWatchClient {
             guard http.statusCode == 200 else {
                 let body = String(data: data, encoding: .utf8) ?? ""
                 print("[PlexWatch] GET \(path): HTTP \(http.statusCode) \(body.prefix(200))")
+                if http.statusCode == 401 {
+                    print("[PlexWatch] Token expired or invalid — clearing credentials")
+                    DispatchQueue.main.async { self.credentials = nil }
+                }
                 return nil
             }
             return try JSONSerialization.jsonObject(with: data) as? [String: Any]

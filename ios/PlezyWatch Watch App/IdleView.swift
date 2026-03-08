@@ -207,14 +207,19 @@ struct IdleView: View {
                 result = await client.createRadioStation(ratingKey: item.ratingKey)
             }
 
-            if let result = result {
-                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
-                if !queueItems.isEmpty {
-                    await MainActor.run {
-                        connectivity.startLocalPlayback()
-                        WatchAudioPlayer.shared.loadQueue(queueItems)
-                    }
+            guard let result = result else {
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            if !queueItems.isEmpty {
+                await MainActor.run {
+                    connectivity.startLocalPlayback()
+                    WatchAudioPlayer.shared.loadQueue(queueItems)
                 }
+            } else {
+                WKInterfaceDevice.current().play(.failure)
             }
         }
     }

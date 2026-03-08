@@ -298,9 +298,11 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
 
             // Auto-switch to remote control mode if phone is playing and we're idle
+            // Don't interrupt local playback or browsing
             if self.appMode == .idle && (self.isPlaying || self.hasTrackInfo) {
                 self.appMode = .remoteControl
             }
+            // If we're in local modes, don't switch — user chose local playback
         }
     }
 

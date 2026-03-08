@@ -168,14 +168,18 @@ struct MainPlaybackPage: View {
 
     private func startRadio(from item: QueueItem) {
         Task {
-            if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.id) {
-                let client = PlexWatchClient.shared
-                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
-                if !queueItems.isEmpty {
-                    await MainActor.run {
-                        WatchAudioPlayer.shared.loadQueue(queueItems)
-                    }
+            guard let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.id) else {
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+            let client = PlexWatchClient.shared
+            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            if !queueItems.isEmpty {
+                await MainActor.run {
+                    WatchAudioPlayer.shared.loadQueue(queueItems)
                 }
+            } else {
+                WKInterfaceDevice.current().play(.failure)
             }
         }
     }
@@ -293,7 +297,7 @@ struct UpNextPage: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.secondary)
 
-            if audioPlayer.queue.count <= 1 {
+            if audioPlayer.currentIndex + 1 >= audioPlayer.queue.count {
                 Spacer()
                 Text("No more tracks")
                     .font(.system(size: 12))
@@ -302,7 +306,7 @@ struct UpNextPage: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 4) {
-                        let startIndex = audioPlayer.currentIndex + 1
+                        let startIndex = min(audioPlayer.currentIndex + 1, audioPlayer.queue.count)
                         let endIndex = min(startIndex + 15, audioPlayer.queue.count)
 
                         ForEach(startIndex..<endIndex, id: \.self) { index in
@@ -349,6 +353,7 @@ struct LocalAlbumArtView: View {
     let token: String?
     @State private var image: UIImage?
     @State private var isLoading = false
+    @State private var loadingUrl: String?
 
     var body: some View {
         Group {
@@ -374,6 +379,7 @@ struct LocalAlbumArtView: View {
             loadImage()
         }
         .onChange(of: url) { _ in
+            image = nil
             loadImage()
         }
     }
@@ -388,7 +394,10 @@ struct LocalAlbumArtView: View {
         }
 
         isLoading = true
+        loadingUrl = urlString
         WatchImageCache.shared.loadImage(urlString: urlString, token: token) { loaded in
+            // Only apply if this is still the URL we're loading
+            guard loadingUrl == urlString else { return }
             isLoading = false
             self.image = loaded
         }

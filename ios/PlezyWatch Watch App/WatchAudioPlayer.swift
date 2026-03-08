@@ -111,6 +111,39 @@ class WatchAudioPlayer: NSObject, ObservableObject {
             name: .AVPlayerItemDidPlayToEndTime,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: nil
+        )
+    }
+
+    @objc private func handleInterruption(_ notification: Notification) {
+        guard let info = notification.userInfo,
+              let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+        switch type {
+        case .began:
+            print("[WatchAudio] Audio session interrupted")
+            DispatchQueue.main.async { self.isPlaying = false }
+        case .ended:
+            print("[WatchAudio] Audio session interruption ended")
+            if let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt {
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    print("[WatchAudio] Resuming playback after interruption")
+                    DispatchQueue.main.async {
+                        self.player?.play()
+                        self.isPlaying = true
+                        self.updateNowPlayingInfo()
+                    }
+                }
+            }
+        @unknown default:
+            break
+        }
     }
 
     /// Set up MPRemoteCommandCenter for system Now Playing controls (Digital Crown volume, etc.)
@@ -505,6 +538,10 @@ class WatchAudioPlayer: NSObject, ObservableObject {
         if let id = currentItemId,
            let originalIndex = originalQueue.firstIndex(where: { $0.id == id }) {
             currentIndex = originalIndex
+        } else {
+            // Current item not found in original queue — clamp to valid range
+            currentIndex = min(currentIndex, max(0, queue.count - 1))
+            print("[WatchAudio] Unshuffle: current item not found in original queue, clamped to \(currentIndex)")
         }
 
         isShuffled = false
