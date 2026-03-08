@@ -173,7 +173,42 @@ struct DebugView: View {
                 }
             }
 
-            // 8. Test audio session
+            // 8. Test HTTP fetch of a stream URL
+            if let testTrack = albums.flatMap({ _ in [MusicItem]() }).first ?? artists.first {
+                // Skip — no easy test track
+            }
+
+            // 8b. Test direct HTTP HEAD on a stream URL
+            await MainActor.run { log("--- Stream URL test ---") }
+            if let firstLib = musicLibs.first {
+                let tracks = await client.getTracks(ratingKey: albums.first?.ratingKey ?? musicLib.key)
+                if let track = tracks.first, let pk = track.partKey {
+                    if let streamUrl = client.streamUrl(partKey: pk),
+                       let url = URL(string: streamUrl) {
+                        await MainActor.run { log("   Testing: \(streamUrl.prefix(70))...") }
+                        do {
+                            var req = URLRequest(url: url)
+                            req.httpMethod = "HEAD"
+                            let (_, resp) = try await URLSession.shared.data(for: req)
+                            if let http = resp as? HTTPURLResponse {
+                                await MainActor.run {
+                                    log("   HTTP \(http.statusCode)")
+                                    log("   Content-Type: \(http.value(forHTTPHeaderField: "Content-Type") ?? "?")")
+                                    log("   Content-Length: \(http.value(forHTTPHeaderField: "Content-Length") ?? "?")")
+                                }
+                            }
+                        } catch {
+                            await MainActor.run { log("   ERR stream test: \(error.localizedDescription)") }
+                        }
+                    } else {
+                        await MainActor.run { log("   No streamUrl for track \(track.title)") }
+                    }
+                } else {
+                    await MainActor.run { log("   No tracks with partKey found") }
+                }
+            }
+
+            // 9. Test audio session & player state
             await MainActor.run {
                 log("--- Audio session ---")
                 let session = AVAudioSession.sharedInstance()
@@ -189,7 +224,7 @@ struct DebugView: View {
                 log("   error: \(player.error ?? "none")")
                 if let item = player.currentItem {
                     log("   current: \(item.title)")
-                    log("   url: \(item.streamUrl.prefix(60))...")
+                    log("   streamUrl: \(item.streamUrl)")
                 }
 
                 isRunning = false

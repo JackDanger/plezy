@@ -90,19 +90,8 @@ class WatchAudioPlayer: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        setupAudioSession()
         setupNotifications()
         setupRemoteCommandCenter()
-    }
-
-    private func setupAudioSession() {
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
-            try session.setActive(true)
-        } catch {
-            print("Failed to setup audio session: \(error)")
-        }
     }
 
     private func setupNotifications() {
@@ -403,37 +392,64 @@ class WatchAudioPlayer: NSObject, ObservableObject {
         error = nil
 
         guard let url = URL(string: item.streamUrl) else {
-            error = "Invalid URL"
+            error = "Invalid URL: \(item.streamUrl.prefix(50))"
             isLoading = false
             return
         }
 
-        // Create player item with headers for Plex authentication
-        var request = URLRequest(url: url)
-        request.setValue(item.plexToken, forHTTPHeaderField: "X-Plex-Token")
+        print("[WatchAudio] loadAndPlay: \(item.title)")
+        print("[WatchAudio] URL: \(item.streamUrl.prefix(100))")
 
-        // Use AVURLAsset with custom options for authentication
-        let headers = ["X-Plex-Token": item.plexToken]
-        let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+        // Activate audio session just before playback (Apple recommends lazy activation)
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+            try session.setActive(true)
+        } catch {
+            print("[WatchAudio] Audio session activation failed: \(error)")
+            self.error = "Audio session: \(error.localizedDescription)"
+            isLoading = false
+            return
+        }
 
+        // Token is already in the URL query string — no custom headers needed
+        let asset = AVURLAsset(url: url)
         playerItem = AVPlayerItem(asset: asset)
 
-        // Observe status
+        // Clear old subscriptions before adding new ones
+        cancellables.removeAll()
+
+        // Observe player item status
         playerItem?.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
                 switch status {
                 case .readyToPlay:
+                    print("[WatchAudio] Ready to play")
                     self?.isLoading = false
                     self?.duration = self?.playerItem?.duration.seconds ?? 0
                     self?.player?.play()
                     self?.isPlaying = true
                     self?.updateNowPlayingInfo()
                 case .failed:
-                    self?.error = self?.playerItem?.error?.localizedDescription ?? "Playback failed"
+                    let err = self?.playerItem?.error?.localizedDescription ?? "Playback failed"
+                    print("[WatchAudio] Player item FAILED: \(err)")
+                    self?.error = err
                     self?.isLoading = false
                 default:
                     break
+                }
+            }
+            .store(in: &cancellables)
+
+        // Observe playback stalls and recover
+        NotificationCenter.default.publisher(for: .AVPlayerItemPlaybackStalled, object: playerItem)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("[WatchAudio] Playback stalled — attempting recovery")
+                self?.player?.pause()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    self?.player?.play()
                 }
             }
             .store(in: &cancellables)
