@@ -306,11 +306,18 @@ class WatchAudioPlayer: NSObject, ObservableObject {
                 // Skip tracks we already have
                 guard !existingIds.contains(key) else { return nil }
                 guard let title = item["title"] as? String else { return nil }
-                guard let media = (item["Media"] as? [[String: Any]])?.first,
-                      let part = (media["Part"] as? [[String: Any]])?.first,
-                      let partKey = part["key"] as? String else { return nil }
 
-                let streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
+                // Try direct stream URL from Media/Part, fall back to transcoding
+                let streamUrl: String
+                if let media = (item["Media"] as? [[String: Any]])?.first,
+                   let part = (media["Part"] as? [[String: Any]])?.first,
+                   let partKey = part["key"] as? String {
+                    streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
+                } else {
+                    let encodedPath = "/library/metadata/\(key)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "/library/metadata/\(key)"
+                    let clientId = PlexWatchClient.shared.clientIdentifier
+                    streamUrl = "\(ref.plexServerUrl)/music/:/transcode/universal/start.mp3?path=\(encodedPath)&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Client-Identifier=\(clientId)&X-Plex-Token=\(ref.plexToken)"
+                }
                 var albumArtUrl: String?
                 if let thumb = item["thumb"] as? String {
                     albumArtUrl = "\(ref.plexServerUrl)\(thumb)?X-Plex-Token=\(ref.plexToken)"
@@ -400,12 +407,17 @@ class WatchAudioPlayer: NSObject, ObservableObject {
                 guard let key = item["ratingKey"] as? String,
                       let title = item["title"] as? String else { return nil }
 
-                // Build stream URL
-                guard let media = (item["Media"] as? [[String: Any]])?.first,
-                      let part = (media["Part"] as? [[String: Any]])?.first,
-                      let partKey = part["key"] as? String else { return nil }
-
-                let streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
+                // Build stream URL — try direct, fall back to transcoding
+                let streamUrl: String
+                if let media = (item["Media"] as? [[String: Any]])?.first,
+                   let part = (media["Part"] as? [[String: Any]])?.first,
+                   let partKey = part["key"] as? String {
+                    streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
+                } else {
+                    let encodedPath = "/library/metadata/\(key)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "/library/metadata/\(key)"
+                    let clientId = PlexWatchClient.shared.clientIdentifier
+                    streamUrl = "\(ref.plexServerUrl)/music/:/transcode/universal/start.mp3?path=\(encodedPath)&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Client-Identifier=\(clientId)&X-Plex-Token=\(ref.plexToken)"
+                }
 
                 // Get album art URL
                 var albumArtUrl: String?

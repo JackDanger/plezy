@@ -193,7 +193,7 @@ class PlexWatchClient {
     }
 
     /// Plex client identifier for API requests
-    private var clientIdentifier: String {
+    var clientIdentifier: String {
         if let stored = UserDefaults.standard.string(forKey: "plexClientId") {
             return stored
         }
@@ -295,10 +295,18 @@ class PlexWatchClient {
         return await createPlayQueue(uri: uri)
     }
 
-    /// Build a stream URL for a track
+    /// Build a stream URL for a track using its part key (direct file access)
     func streamUrl(partKey: String) -> String? {
         guard let creds = credentials else { return nil }
         return "\(creds.serverUrl)\(partKey)?X-Plex-Token=\(creds.token)"
+    }
+
+    /// Build a stream URL for a track using its rating key (universal transcoding)
+    /// Used when Media/Part data is not available (e.g. radio station responses)
+    func transcodingStreamUrl(ratingKey: String) -> String? {
+        guard let creds = credentials else { return nil }
+        let encodedPath = "/library/metadata/\(ratingKey)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "/library/metadata/\(ratingKey)"
+        return "\(creds.serverUrl)/music/:/transcode/universal/start.mp3?path=\(encodedPath)&mediaIndex=0&partIndex=0&protocol=http&X-Plex-Client-Identifier=\(clientIdentifier)&X-Plex-Token=\(creds.token)"
     }
 
     /// Build a thumbnail URL
@@ -416,7 +424,14 @@ struct MusicItem: Identifiable {
 
     /// Convert to a QueueItem for playback
     func toQueueItem(client: PlexWatchClient) -> QueueItem? {
-        guard let partKey, let streamUrl = client.streamUrl(partKey: partKey) else { return nil }
+        // Try direct stream URL first (from Media/Part data), fall back to transcoding URL
+        let streamUrl: String?
+        if let partKey {
+            streamUrl = client.streamUrl(partKey: partKey)
+        } else {
+            streamUrl = client.transcodingStreamUrl(ratingKey: ratingKey)
+        }
+        guard let streamUrl else { return nil }
         guard let token = client.credentials?.token else { return nil }
         return QueueItem(from: [
             "id": ratingKey,
