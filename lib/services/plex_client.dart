@@ -91,6 +91,7 @@ List<PlexMetadata> _processOnDeckResponse(Map<String, dynamic> decoded, String s
           json as Map<String, dynamic>,
         ).copyWith(serverId: serverId, serverName: serverName),
       )
+      .where((item) => item.mediaType.isVideo)
       .toList();
 
   return allItems;
