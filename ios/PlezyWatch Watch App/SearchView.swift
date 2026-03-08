@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 struct SearchView: View {
     @State private var searchText = ""
@@ -8,55 +9,101 @@ struct SearchView: View {
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
-        VStack(spacing: 0) {
-            // watchOS TextField automatically offers dictation
-            TextField("Search music...", text: $searchText)
-                .font(.system(size: 14))
-                .onSubmit { performSearch() }
-
+        List {
             if isSearching {
-                Spacer()
-                ProgressView("Searching...")
-                Spacer()
+                HStack {
+                    Spacer()
+                    ProgressView()
+                    Spacer()
+                }
+                .listRowBackground(Color.clear)
             } else if results.isEmpty && hasSearched {
-                Spacer()
                 Text("No results")
-                    .font(.system(size: 12))
+                    .font(.body)
                     .foregroundStyle(.secondary)
-                Spacer()
+                    .listRowBackground(Color.clear)
             } else {
-                List(results) { item in
-                    Button(action: { handleTap(item) }) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 4) {
-                                Image(systemName: iconFor(item))
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.secondary)
-                                Text(item.title)
-                                    .font(.system(size: 13))
-                                    .lineLimit(1)
-                            }
-                            if let sub = item.subtitle {
-                                Text(sub)
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
+                // Group results by type
+                let artists = results.filter { $0.isArtist }
+                let albums = results.filter { $0.isAlbum }
+                let tracks = results.filter { $0.isTrack }
+
+                if !artists.isEmpty {
+                    Section("Artists") {
+                        ForEach(artists) { item in
+                            NavigationLink(destination: ArtistDetailView(artist: item)) {
+                                HStack(spacing: 10) {
+                                    CachedThumbnailView(
+                                        urlString: PlexWatchClient.shared.thumbnailUrl(item.thumb),
+                                        size: 36
+                                    )
+                                    .clipShape(Circle())
+                                    Text(item.title)
+                                        .font(.body)
+                                        .lineLimit(1)
+                                }
                             }
                         }
                     }
-                    .buttonStyle(.plain)
+                }
+
+                if !albums.isEmpty {
+                    Section("Albums") {
+                        ForEach(albums) { item in
+                            NavigationLink(destination: TrackListView(albumKey: item.ratingKey, albumTitle: item.title)) {
+                                HStack(spacing: 10) {
+                                    CachedThumbnailView(
+                                        urlString: PlexWatchClient.shared.thumbnailUrl(item.thumb),
+                                        size: 36
+                                    )
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.title)
+                                            .font(.body)
+                                            .lineLimit(1)
+                                        if let artist = item.artist {
+                                            Text(artist)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !tracks.isEmpty {
+                    Section("Songs") {
+                        ForEach(tracks) { item in
+                            Button(action: { handleTrackTap(item) }) {
+                                HStack(spacing: 10) {
+                                    CachedThumbnailView(
+                                        urlString: PlexWatchClient.shared.thumbnailUrl(item.thumb),
+                                        size: 36
+                                    )
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.title)
+                                            .font(.body)
+                                            .lineLimit(1)
+                                        if let artist = item.artist {
+                                            Text(artist)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
         }
+        .searchable(text: $searchText, prompt: "Artists, albums, songs")
+        .onSubmit(of: .search) { performSearch() }
         .navigationTitle("Search")
-    }
-
-    private func iconFor(_ item: MusicItem) -> String {
-        switch item.type {
-        case "artist": return "person.fill"
-        case "album": return "square.stack"
-        default: return "music.note"
-        }
     }
 
     private func performSearch() {
@@ -72,22 +119,17 @@ struct SearchView: View {
         }
     }
 
-    private func handleTap(_ item: MusicItem) {
+    private func handleTrackTap(_ item: MusicItem) {
+        WKInterfaceDevice.current().play(.click)
         Task {
-            if item.isTrack {
-                // Play the track directly via radio (creates endless queue from it)
-                if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.ratingKey) {
-                    startPlayback(result.items)
-                }
-            } else if item.isAlbum {
-                if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: item.ratingKey) {
-                    startPlayback(result.items)
-                }
-            } else if item.isArtist {
-                // For artists, start a radio station
-                if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.ratingKey) {
-                    startPlayback(result.items)
-                }
+            if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.ratingKey) {
+                startPlayback(result.items)
+                RecentlyPlayedManager.shared.record(
+                    ratingKey: item.ratingKey,
+                    title: item.title,
+                    type: .station,
+                    thumb: item.thumb
+                )
             }
         }
     }
@@ -97,8 +139,7 @@ struct SearchView: View {
         let queueItems = items.compactMap { $0.toQueueItem(client: client) }
         if !queueItems.isEmpty {
             DispatchQueue.main.async {
-                connectivity.isPlayingLocally = true
-                connectivity.hasLocalQueue = true
+                connectivity.startLocalPlayback()
                 WatchAudioPlayer.shared.loadQueue(queueItems)
             }
         }

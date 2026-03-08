@@ -35,6 +35,10 @@
 		F337F29332D9268EF6654844 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25332494CEBB62D83A45638C /* WatchSessionManager.swift */; };
 		F37BB572E0F0606E20596E43 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3469ED9D4F3E58F8C3AEB7DC /* Pods_RunnerTests.framework */; };
 		F4FDDCE9A56A10B520859C99 /* PlezyWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A21E7FAB4F5B6BA046E7B4B9 /* PlezyWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		AA1B2C3D4E5F6A7B8C9D0E1F /* RecentlyPlayedManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1B2C3D4E5F6A7B8C9D0E10 /* RecentlyPlayedManager.swift */; };
+		BB2C3D4E5F6A7B8C9D0E1F20 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2C3D4E5F6A7B8C9D0E1F21 /* SetupView.swift */; };
+		CC3D4E5F6A7B8C9D0E1F2031 /* WatchImageCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */; };
+		DD4E5F6A7B8C9D0E1F203142 /* plezy.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6A48DFAF2EA70C7100C1F7CD /* plezy.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -121,6 +125,9 @@
 		E47D001958CEF9AEE4F83141 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		EB57BADBEB3AE8725FA0DD44 /* PlexWatchClient.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlexWatchClient.swift; sourceTree = "<group>"; };
 		F54971BD391928779DBA03AF /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS11.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		AA1B2C3D4E5F6A7B8C9D0E10 /* RecentlyPlayedManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecentlyPlayedManager.swift; sourceTree = "<group>"; };
+		BB2C3D4E5F6A7B8C9D0E1F21 /* SetupView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchImageCache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -167,6 +174,9 @@
 				C19EBD77ED1AC18146C9A6C3 /* LibraryBrowserView.swift */,
 				DFBBEE957E9B0CE9708526C1 /* SearchView.swift */,
 				EB57BADBEB3AE8725FA0DD44 /* PlexWatchClient.swift */,
+				AA1B2C3D4E5F6A7B8C9D0E10 /* RecentlyPlayedManager.swift */,
+				BB2C3D4E5F6A7B8C9D0E1F21 /* SetupView.swift */,
+				CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */,
 			);
 			path = "PlezyWatch Watch App";
 			sourceTree = "<group>";
@@ -392,6 +402,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E211FBE373CAF47F2AE50993 /* Assets.xcassets in Resources */,
+				DD4E5F6A7B8C9D0E1F203142 /* plezy.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -535,6 +546,9 @@
 				8A0900D328663BDA55C82669 /* LibraryBrowserView.swift in Sources */,
 				47C6C673E35F2CEFD49C9E1F /* SearchView.swift in Sources */,
 				C5BFFB124C476F96369A47DB /* PlexWatchClient.swift in Sources */,
+				AA1B2C3D4E5F6A7B8C9D0E1F /* RecentlyPlayedManager.swift in Sources */,
+				BB2C3D4E5F6A7B8C9D0E1F20 /* SetupView.swift in Sources */,
+				CC3D4E5F6A7B8C9D0E1F2031 /* WatchImageCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -599,7 +613,7 @@
 		1302C547126B511A9868275A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = plezy;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
@@ -922,7 +936,7 @@
 		9A437C212E639594D6A8B93C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = plezy;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
@@ -948,7 +962,7 @@
 		E49D73ECC73D4BC616E4D6F4 /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = plezy;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";

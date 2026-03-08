@@ -1,19 +1,27 @@
 import SwiftUI
 
+/// The app's operational mode
+enum AppMode {
+    case idle
+    case remoteControl
+    case localPlaying
+    case localBrowsing
+}
+
 struct ContentView: View {
     @EnvironmentObject var connectivity: WatchConnectivityManager
     @StateObject private var audioPlayer = WatchAudioPlayer.shared
-    
+
     var body: some View {
         Group {
-            if connectivity.isPlayingLocally || audioPlayer.isPlaying || audioPlayer.isLoading {
-                // Local playback mode - playing on watch
+            switch connectivity.appMode {
+            case .localPlaying:
                 LocalPlaybackView()
-            } else if connectivity.isPlaying || connectivity.hasTrackInfo {
-                // Remote control mode - phone is playing
+            case .localBrowsing:
+                IdleView()
+            case .remoteControl:
                 NowPlayingView()
-            } else {
-                // Idle state
+            case .idle:
                 IdleView()
             }
         }

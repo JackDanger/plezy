@@ -1,4 +1,7 @@
 import SwiftUI
+import WatchKit
+
+// MARK: - Library Home (Apple Music-style categories)
 
 struct LibraryBrowserView: View {
     @State private var libraries: [LibrarySection] = []
@@ -7,26 +10,21 @@ struct LibraryBrowserView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading...")
+                ProgressView()
             } else if libraries.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "music.note.house")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.secondary)
-                    Text("No music libraries")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                ContentUnavailableView("No Music Libraries", systemImage: "music.note.house")
+            } else if libraries.count == 1 {
+                // Single library: go straight to categories
+                LibraryCategoryView(sectionId: libraries[0].key, libraryTitle: libraries[0].title)
             } else {
                 List(libraries) { library in
-                    NavigationLink(destination: ArtistListView(sectionId: library.key, libraryTitle: library.title)) {
+                    NavigationLink(destination: LibraryCategoryView(sectionId: library.key, libraryTitle: library.title)) {
                         Label(library.title, systemImage: "music.note.list")
-                            .font(.system(size: 14))
                     }
                 }
+                .navigationTitle("Libraries")
             }
         }
-        .navigationTitle("Libraries")
         .task {
             libraries = await PlexWatchClient.shared.getMusicLibraries()
             isLoading = false
@@ -34,27 +32,73 @@ struct LibraryBrowserView: View {
     }
 }
 
-struct ArtistListView: View {
+struct LibraryCategoryView: View {
     let sectionId: String
     let libraryTitle: String
+
+    var body: some View {
+        List {
+            NavigationLink(destination: ArtistListView(sectionId: sectionId)) {
+                Label("Artists", systemImage: "music.mic")
+            }
+            NavigationLink(destination: AlbumGridView(sectionId: sectionId)) {
+                Label("Albums", systemImage: "square.stack")
+            }
+            NavigationLink(destination: PlaylistListView()) {
+                Label("Playlists", systemImage: "music.note.list")
+            }
+        }
+        .navigationTitle(libraryTitle)
+    }
+}
+
+// MARK: - Artist List (alphabetical sections)
+
+struct ArtistListView: View {
+    let sectionId: String
     @State private var artists: [MusicItem] = []
     @State private var isLoading = true
+
+    private var groupedArtists: [(String, [MusicItem])] {
+        let grouped = Dictionary(grouping: artists) { item -> String in
+            let first = item.title.folding(options: .diacriticInsensitive, locale: .current)
+                .prefix(1).uppercased()
+            if first.isEmpty { return "#" }
+            return first.first?.isLetter == true ? String(first) : "#"
+        }
+        return grouped.sorted { $0.key < $1.key }
+    }
 
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading...")
+                ProgressView()
+            } else if artists.isEmpty {
+                ContentUnavailableView("No Artists", systemImage: "music.mic")
             } else {
-                List(artists) { artist in
-                    NavigationLink(destination: AlbumListView(artistKey: artist.ratingKey, artistName: artist.title)) {
-                        Text(artist.title)
-                            .font(.system(size: 13))
-                            .lineLimit(2)
+                List {
+                    ForEach(groupedArtists, id: \.0) { letter, items in
+                        Section(header: Text(letter)) {
+                            ForEach(items) { artist in
+                                NavigationLink(destination: ArtistDetailView(artist: artist)) {
+                                    HStack(spacing: 10) {
+                                        CachedThumbnailView(
+                                            urlString: PlexWatchClient.shared.thumbnailUrl(artist.thumb),
+                                            size: 40
+                                        )
+                                        .clipShape(Circle())
+                                        Text(artist.title)
+                                            .font(.body)
+                                            .lineLimit(2)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
-        .navigationTitle(libraryTitle)
+        .navigationTitle("Artists")
         .task {
             artists = await PlexWatchClient.shared.getArtists(sectionId: sectionId)
             isLoading = false
@@ -62,9 +106,10 @@ struct ArtistListView: View {
     }
 }
 
-struct AlbumListView: View {
-    let artistKey: String
-    let artistName: String
+// MARK: - Artist Detail (albums + actions)
+
+struct ArtistDetailView: View {
+    let artist: MusicItem
     @State private var albums: [MusicItem] = []
     @State private var isLoading = true
     @EnvironmentObject var connectivity: WatchConnectivityManager
@@ -72,68 +117,294 @@ struct AlbumListView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading...")
+                ProgressView()
             } else {
                 List {
-                    // Play all / Radio buttons
-                    Button(action: { playAll() }) {
-                        Label("Play All", systemImage: "play.fill")
-                    }
-                    Button(action: { startRadio() }) {
-                        Label("Artist Radio", systemImage: "antenna.radiowaves.left.and.right")
+                    Section {
+                        Button(action: { playAll(shuffle: false) }) {
+                            Label("Play All", systemImage: "play.fill")
+                        }
+                        Button(action: { playAll(shuffle: true) }) {
+                            Label("Shuffle All", systemImage: "shuffle")
+                        }
+                        Button(action: { startRadio() }) {
+                            Label("Artist Radio", systemImage: "antenna.radiowaves.left.and.right")
+                        }
                     }
 
-                    ForEach(albums) { album in
-                        NavigationLink(destination: TrackListView(albumKey: album.ratingKey, albumTitle: album.title)) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(album.title)
-                                    .font(.system(size: 13))
-                                    .lineLimit(2)
+                    Section("Albums") {
+                        ForEach(albums) { album in
+                            NavigationLink(destination: TrackListView(albumKey: album.ratingKey, albumTitle: album.title)) {
+                                HStack(spacing: 10) {
+                                    CachedThumbnailView(
+                                        urlString: PlexWatchClient.shared.thumbnailUrl(album.thumb),
+                                        size: 44
+                                    )
+                                    Text(album.title)
+                                        .font(.body)
+                                        .lineLimit(2)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        .navigationTitle(artistName)
+        .navigationTitle(artist.title)
         .task {
-            albums = await PlexWatchClient.shared.getAlbums(ratingKey: artistKey)
+            albums = await PlexWatchClient.shared.getAlbums(ratingKey: artist.ratingKey)
             isLoading = false
         }
     }
 
-    private func playAll() {
+    private func playAll(shuffle: Bool) {
+        WKInterfaceDevice.current().play(.click)
         Task {
-            if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: artistKey) {
+            if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: artist.ratingKey) {
                 let client = PlexWatchClient.shared
                 let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
                 if !queueItems.isEmpty {
                     await MainActor.run {
-                        connectivity.isPlayingLocally = true
-                        connectivity.hasLocalQueue = true
+                        connectivity.startLocalPlayback()
                         WatchAudioPlayer.shared.loadQueue(queueItems)
+                        if shuffle { WatchAudioPlayer.shared.toggleShuffle() }
                     }
+                    RecentlyPlayedManager.shared.record(
+                        ratingKey: artist.ratingKey,
+                        title: artist.title,
+                        type: .artist,
+                        thumb: albums.first?.thumb ?? artist.thumb
+                    )
                 }
             }
         }
     }
 
     private func startRadio() {
+        WKInterfaceDevice.current().play(.click)
         Task {
-            if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: artistKey) {
+            if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: artist.ratingKey) {
                 let client = PlexWatchClient.shared
                 let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
                 if !queueItems.isEmpty {
                     await MainActor.run {
-                        connectivity.isPlayingLocally = true
-                        connectivity.hasLocalQueue = true
+                        connectivity.startLocalPlayback()
                         WatchAudioPlayer.shared.loadQueue(queueItems)
+                    }
+                    RecentlyPlayedManager.shared.record(
+                        ratingKey: artist.ratingKey,
+                        title: artist.title,
+                        type: .station,
+                        thumb: albums.first?.thumb ?? artist.thumb
+                    )
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Album Grid (alphabetical sections)
+
+struct AlbumGridView: View {
+    let sectionId: String
+    @State private var albums: [MusicItem] = []
+    @State private var isLoading = true
+
+    private var groupedAlbums: [(String, [MusicItem])] {
+        let grouped = Dictionary(grouping: albums) { item -> String in
+            let first = item.title.folding(options: .diacriticInsensitive, locale: .current)
+                .prefix(1).uppercased()
+            if first.isEmpty { return "#" }
+            return first.first?.isLetter == true ? String(first) : "#"
+        }
+        return grouped.sorted { $0.key < $1.key }
+    }
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+            } else if albums.isEmpty {
+                ContentUnavailableView("No Albums", systemImage: "square.stack")
+            } else {
+                List {
+                    ForEach(groupedAlbums, id: \.0) { letter, items in
+                        Section(header: Text(letter)) {
+                            ForEach(items) { album in
+                                NavigationLink(destination: TrackListView(albumKey: album.ratingKey, albumTitle: album.title)) {
+                                    HStack(spacing: 10) {
+                                        CachedThumbnailView(
+                                            urlString: PlexWatchClient.shared.thumbnailUrl(album.thumb),
+                                            size: 44
+                                        )
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(album.title)
+                                                .font(.body)
+                                                .lineLimit(2)
+                                            if let artist = album.artist {
+                                                Text(artist)
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                                    .lineLimit(1)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Albums")
+        .task {
+            albums = await PlexWatchClient.shared.getAllAlbums(sectionId: sectionId)
+            isLoading = false
+        }
+    }
+}
+
+// MARK: - Playlist List
+
+struct PlaylistListView: View {
+    @State private var playlists: [MusicItem] = []
+    @State private var isLoading = true
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+            } else if playlists.isEmpty {
+                ContentUnavailableView("No Playlists", systemImage: "music.note.list")
+            } else {
+                List(playlists) { playlist in
+                    NavigationLink(destination: PlaylistDetailView(playlist: playlist)) {
+                        HStack(spacing: 10) {
+                            CachedThumbnailView(
+                                urlString: PlexWatchClient.shared.thumbnailUrl(playlist.thumb),
+                                size: 44
+                            )
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(playlist.title)
+                                    .font(.body)
+                                    .lineLimit(2)
+                                if let sub = playlist.artist {
+                                    Text(sub)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Playlists")
+        .task {
+            playlists = await PlexWatchClient.shared.getPlaylists()
+            isLoading = false
+        }
+    }
+}
+
+// MARK: - Playlist Detail
+
+struct PlaylistDetailView: View {
+    let playlist: MusicItem
+    @State private var tracks: [MusicItem] = []
+    @State private var isLoading = true
+    @EnvironmentObject var connectivity: WatchConnectivityManager
+
+    var body: some View {
+        Group {
+            if isLoading {
+                ProgressView()
+            } else {
+                List {
+                    Section {
+                        Button(action: { playPlaylist(shuffle: false) }) {
+                            Label("Play", systemImage: "play.fill")
+                        }
+                        Button(action: { playPlaylist(shuffle: true) }) {
+                            Label("Shuffle", systemImage: "shuffle")
+                        }
+                    }
+
+                    Section {
+                        ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
+                            Button(action: { playFrom(index: index) }) {
+                                HStack(spacing: 10) {
+                                    CachedThumbnailView(
+                                        urlString: PlexWatchClient.shared.thumbnailUrl(track.thumb),
+                                        size: 36
+                                    )
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(track.title)
+                                            .font(.body)
+                                            .lineLimit(1)
+                                        if let artist = track.artist {
+                                            Text(artist)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(playlist.title)
+        .task {
+            tracks = await PlexWatchClient.shared.getPlaylistItems(ratingKey: playlist.ratingKey)
+            isLoading = false
+        }
+    }
+
+    private func playPlaylist(shuffle: Bool) {
+        WKInterfaceDevice.current().play(.click)
+        Task {
+            if let result = await PlexWatchClient.shared.createPlaylistQueue(ratingKey: playlist.ratingKey, shuffle: shuffle) {
+                let client = PlexWatchClient.shared
+                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+                if !queueItems.isEmpty {
+                    await MainActor.run {
+                        connectivity.startLocalPlayback()
+                        WatchAudioPlayer.shared.loadQueue(queueItems)
+                    }
+                    RecentlyPlayedManager.shared.record(
+                        ratingKey: playlist.ratingKey,
+                        title: playlist.title,
+                        type: .album,
+                        thumb: playlist.thumb
+                    )
+                }
+            }
+        }
+    }
+
+    private func playFrom(index: Int) {
+        WKInterfaceDevice.current().play(.click)
+        Task {
+            if let result = await PlexWatchClient.shared.createPlaylistQueue(ratingKey: playlist.ratingKey) {
+                let client = PlexWatchClient.shared
+                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+                if !queueItems.isEmpty {
+                    await MainActor.run {
+                        connectivity.startLocalPlayback()
+                        WatchAudioPlayer.shared.loadQueue(queueItems, startIndex: min(index, queueItems.count - 1))
                     }
                 }
             }
         }
     }
 }
+
+// MARK: - Track List (album detail)
 
 struct TrackListView: View {
     let albumKey: String
@@ -145,28 +416,35 @@ struct TrackListView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView("Loading...")
+                ProgressView()
             } else {
                 List {
-                    Button(action: { playAlbum() }) {
-                        Label("Play Album", systemImage: "play.fill")
+                    Section {
+                        Button(action: { playAlbum(shuffle: false) }) {
+                            Label("Play", systemImage: "play.fill")
+                        }
+                        Button(action: { playAlbum(shuffle: true) }) {
+                            Label("Shuffle", systemImage: "shuffle")
+                        }
                     }
 
-                    ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
-                        Button(action: { playFrom(index: index) }) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(track.title)
-                                    .font(.system(size: 13))
-                                    .lineLimit(2)
-                                if let artist = track.artist {
-                                    Text(artist)
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
+                    Section {
+                        ForEach(Array(tracks.enumerated()), id: \.element.id) { index, track in
+                            Button(action: { playFrom(index: index) }) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(track.title)
+                                        .font(.body)
+                                        .lineLimit(2)
+                                    if let artist = track.artist {
+                                        Text(artist)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
                                 }
                             }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -178,30 +456,41 @@ struct TrackListView: View {
         }
     }
 
-    private func playAlbum() {
+    private func playAlbum(shuffle: Bool) {
+        WKInterfaceDevice.current().play(.click)
         Task {
             if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: albumKey) {
-                startPlayback(result.items)
+                let client = PlexWatchClient.shared
+                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+                if !queueItems.isEmpty {
+                    await MainActor.run {
+                        connectivity.startLocalPlayback()
+                        WatchAudioPlayer.shared.loadQueue(queueItems)
+                        if shuffle { WatchAudioPlayer.shared.toggleShuffle() }
+                    }
+                    RecentlyPlayedManager.shared.record(
+                        ratingKey: albumKey,
+                        title: albumTitle,
+                        type: .album,
+                        thumb: tracks.first?.thumb
+                    )
+                }
             }
         }
     }
 
     private func playFrom(index: Int) {
+        WKInterfaceDevice.current().play(.click)
         Task {
             if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: albumKey) {
-                startPlayback(result.items, startIndex: index)
-            }
-        }
-    }
-
-    private func startPlayback(_ items: [MusicItem], startIndex: Int = 0) {
-        let client = PlexWatchClient.shared
-        let queueItems = items.compactMap { $0.toQueueItem(client: client) }
-        if !queueItems.isEmpty {
-            DispatchQueue.main.async {
-                connectivity.isPlayingLocally = true
-                connectivity.hasLocalQueue = true
-                WatchAudioPlayer.shared.loadQueue(queueItems, startIndex: min(startIndex, queueItems.count - 1))
+                let client = PlexWatchClient.shared
+                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+                if !queueItems.isEmpty {
+                    await MainActor.run {
+                        connectivity.startLocalPlayback()
+                        WatchAudioPlayer.shared.loadQueue(queueItems, startIndex: min(index, queueItems.count - 1))
+                    }
+                }
             }
         }
     }

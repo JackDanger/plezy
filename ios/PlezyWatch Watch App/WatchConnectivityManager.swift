@@ -7,11 +7,13 @@ enum PlaybackCommand: String {
     case next
     case previous
     case transferToWatch
+    case volumeUp
+    case volumeDown
 }
 
 class WatchConnectivityManager: NSObject, ObservableObject {
     static let shared = WatchConnectivityManager()
-    
+
     // Published state for remote control (when phone is playing)
     @Published var isReachable = false
     @Published var isPlaying = false
@@ -21,28 +23,34 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     @Published var albumArtData: Data?
     @Published var canGoNext = true
     @Published var canGoPrevious = true
-    
-    // Watch-local playback state
-    @Published var isPlayingLocally = false
+
+    // Remote playback position/duration (sent from phone)
+    @Published var remotePosition: Double = 0
+    @Published var remoteDuration: Double = 0
+
+    // App mode state machine
+    @Published var appMode: AppMode = .idle
+
+    // Legacy flags kept for compatibility
     @Published var hasLocalQueue = false
     @Published var errorMessage: String?
     @Published var isLoading = false
-    
+
     // Debug info
     @Published var debugInfo: String = "Initializing..."
-    
+
     private var session: WCSession?
     private var activationRetryCount = 0
     private let maxRetries = 3
-    
+
     // Reference to the audio player
     var audioPlayer: WatchAudioPlayer {
         WatchAudioPlayer.shared
     }
-    
+
     override init() {
         super.init()
-        
+
         if WCSession.isSupported() {
             session = WCSession.default
             session?.delegate = self
@@ -52,7 +60,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             debugInfo = "WCSession not supported"
         }
     }
-    
+
     /// Ensure session is activated
     private func ensureSessionActive() {
         guard let session = session else { return }
@@ -60,18 +68,37 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             session.activate()
         }
     }
-    
+
     func sendCommand(_ command: PlaybackCommand) {
         guard let session = session else { return }
         ensureSessionActive()
         guard session.isReachable else { return }
-        
+
         let message: [String: Any] = ["command": command.rawValue]
         session.sendMessage(message, replyHandler: nil) { error in
             // Ignore errors for simple commands
         }
     }
-    
+
+    /// Request Plex credentials from the phone
+    func requestCredentials() {
+        guard let session = session, session.isReachable else { return }
+        guard !PlexWatchClient.shared.hasCredentials else { return }
+
+        let message: [String: Any] = ["command": "requestCredentials"]
+        session.sendMessage(message, replyHandler: { [weak self] response in
+            if let serverUrl = response["serverUrl"] as? String,
+               let token = response["token"] as? String {
+                PlexWatchClient.shared.saveCredentials(serverUrl: serverUrl, token: token)
+                DispatchQueue.main.async {
+                    self?.objectWillChange.send()
+                }
+            }
+        }) { error in
+            // Silently fail — user can still use manual setup
+        }
+    }
+
     func requestPlayPhoneQueue() {
         guard let session = session else {
             DispatchQueue.main.async {
@@ -80,10 +107,10 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
             return
         }
-        
+
         // Ensure session is active
         ensureSessionActive()
-        
+
         // Update debug info with session state
         let state = "Act: \(session.activationState.rawValue), Reach: \(session.isReachable)"
         DispatchQueue.main.async {
@@ -91,7 +118,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             self.isLoading = true
             self.errorMessage = nil
         }
-        
+
         // Check reachability
         guard session.isReachable else {
             DispatchQueue.main.async {
@@ -101,15 +128,15 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
             return
         }
-        
+
         // Send request to phone to transfer queue
         let message: [String: Any] = ["command": "transferToWatch"]
-        
+
         session.sendMessage(message, replyHandler: { [weak self] response in
             DispatchQueue.main.async {
                 self?.isLoading = false
             }
-            
+
             // Check for play queue reference first (preferred method)
             var playQueueRef: PlayQueueReference?
             if let refData = response["playQueueRef"] as? [String: Any] {
@@ -118,7 +145,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                     self?.debugInfo = "Got queue ref: \(playQueueRef?.playQueueId ?? 0)"
                 }
             }
-            
+
             // Phone will send queue data in response (either with or without ref)
             if let queueData = response["queue"] as? [[String: Any]] {
                 DispatchQueue.main.async {
@@ -140,7 +167,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             let errorDesc = error.localizedDescription
             DispatchQueue.main.async {
                 self?.isLoading = false
-                
+
                 // Provide more specific error messages
                 if errorDesc.contains("not reachable") || errorDesc.contains("payload") {
                     self?.errorMessage = "Phone app not responding"
@@ -152,7 +179,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
         }
     }
-    
+
     private func handleQueueTransfer(_ queueData: [[String: Any]], startIndex: Int, playQueueRef: PlayQueueReference? = nil) {
         // Persist Plex credentials from the queue transfer for independent Watch operation
         if let ref = playQueueRef {
@@ -173,7 +200,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
 
             if !items.isEmpty {
                 self.hasLocalQueue = true
-                self.isPlayingLocally = true
+                self.appMode = .localPlaying
                 self.errorMessage = nil
                 self.debugInfo = "Playing \(items.count) items" + (playQueueRef != nil ? " (ref: \(playQueueRef!.playQueueId))" : "")
                 self.audioPlayer.loadQueue(items, startIndex: startIndex, queueRef: playQueueRef)
@@ -191,7 +218,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                         self.isLoading = false
                         if success {
                             self.hasLocalQueue = true
-                            self.isPlayingLocally = true
+                            self.appMode = .localPlaying
                             self.errorMessage = nil
                             self.debugInfo = "Playing from Plex"
                             self.audioPlayer.play()
@@ -207,46 +234,54 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
         }
     }
-    
+
     private func updateState(from message: [String: Any]) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
+
             // Check for play queue reference
             var playQueueRef: PlayQueueReference?
             if let refData = message["playQueueRef"] as? [String: Any] {
                 playQueueRef = PlayQueueReference(from: refData)
             }
-            
+
             // Handle queue transfer
             if let queueData = message["queue"] as? [[String: Any]] {
                 self.handleQueueTransfer(queueData, startIndex: message["currentIndex"] as? Int ?? 0, playQueueRef: playQueueRef)
                 return
             }
-            
+
             if let playing = message["isPlaying"] as? Bool {
                 self.isPlaying = playing
             }
-            
+
             if let title = message["title"] as? String {
                 self.trackTitle = title
                 self.hasTrackInfo = !title.isEmpty
             }
-            
+
             self.trackArtist = message["artist"] as? String
-            
+
             if let artData = message["albumArt"] as? Data {
                 self.albumArtData = artData
             }
-            
+
             if let canNext = message["canGoNext"] as? Bool {
                 self.canGoNext = canNext
             }
-            
+
             if let canPrev = message["canGoPrevious"] as? Bool {
                 self.canGoPrevious = canPrev
             }
-            
+
+            // Remote position/duration
+            if let position = message["position"] as? Double {
+                self.remotePosition = position
+            }
+            if let duration = message["duration"] as? Double {
+                self.remoteDuration = duration
+            }
+
             // Handle clear state message
             if let clear = message["clearState"] as? Bool, clear {
                 self.isPlaying = false
@@ -254,19 +289,55 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                 self.trackTitle = ""
                 self.trackArtist = nil
                 self.albumArtData = nil
+                self.remotePosition = 0
+                self.remoteDuration = 0
+                // Return to idle if we were remote controlling
+                if self.appMode == .remoteControl {
+                    self.appMode = .idle
+                }
+            }
+
+            // Auto-switch to remote control mode if phone is playing and we're idle
+            if self.appMode == .idle && (self.isPlaying || self.hasTrackInfo) {
+                self.appMode = .remoteControl
             }
         }
     }
-    
-    // Stop local playback and clear queue
+
+    // MARK: - App Mode Management
+
+    /// Start local playback mode (called when browse/search triggers playback)
+    func startLocalPlayback() {
+        hasLocalQueue = true
+        appMode = .localPlaying
+        errorMessage = nil
+    }
+
+    /// Dismiss the player UI but keep audio playing
+    func dismissToBackground() {
+        if audioPlayer.hasQueue {
+            appMode = .localBrowsing
+        } else {
+            appMode = .idle
+        }
+    }
+
+    /// Return to the player from browse mode
+    func returnToPlayer() {
+        if audioPlayer.hasQueue {
+            appMode = .localPlaying
+        }
+    }
+
+    /// Stop local playback and clear queue entirely
     func stopLocalPlayback() {
         audioPlayer.stop()
         hasLocalQueue = false
-        isPlayingLocally = false
+        appMode = .idle
         errorMessage = nil
         debugInfo = "Stopped"
     }
-    
+
     // Retry activation if needed
     func retryActivation() {
         guard activationRetryCount < maxRetries else {
@@ -275,10 +346,10 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             }
             return
         }
-        
+
         activationRetryCount += 1
         session?.activate()
-        
+
         DispatchQueue.main.async {
             self.debugInfo = "Retrying activation (\(self.activationRetryCount)/\(self.maxRetries))..."
         }
@@ -290,7 +361,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async {
             self.isReachable = session.isReachable
-            
+
             if let error = error {
                 self.debugInfo = "Activation error: \(error.localizedDescription)"
                 // Try to retry
@@ -299,11 +370,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 }
                 return
             }
-            
+
             switch activationState {
             case .activated:
                 self.activationRetryCount = 0 // Reset on success
                 self.debugInfo = session.isReachable ? "Connected" : "Activated, not reachable"
+                if session.isReachable {
+                    self.requestCredentials()
+                }
             case .inactive:
                 self.debugInfo = "Inactive"
             case .notActivated:
@@ -313,23 +387,26 @@ extension WatchConnectivityManager: WCSessionDelegate {
             }
         }
     }
-    
+
     func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async {
             self.isReachable = session.isReachable
             self.debugInfo = session.isReachable ? "Connected" : "Not reachable"
+            if session.isReachable {
+                self.requestCredentials()
+            }
         }
     }
-    
+
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         updateState(from: message)
     }
-    
+
     func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         updateState(from: message)
         replyHandler(["received": true])
     }
-    
+
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
         updateState(from: applicationContext)
     }

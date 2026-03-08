@@ -90,6 +90,72 @@ class PlexWatchClient {
         await getMetadataList("/library/metadata/\(ratingKey)/children")
     }
 
+    /// Get all albums in a music library
+    func getAllAlbums(sectionId: String) async -> [MusicItem] {
+        await getMetadataList("/library/sections/\(sectionId)/all?type=9&sort=titleSort")
+    }
+
+    /// Get playlists (audio only)
+    func getPlaylists() async -> [MusicItem] {
+        guard let json = await get("/playlists?playlistType=audio") else { return [] }
+        guard let container = json["MediaContainer"] as? [String: Any],
+              let metadata = container["Metadata"] as? [[String: Any]] else { return [] }
+
+        return metadata.compactMap { dict -> MusicItem? in
+            guard let ratingKey = dict["ratingKey"] as? String,
+                  let title = dict["title"] as? String else { return nil }
+            let duration = dict["duration"] as? Double
+            let thumb = dict["composite"] as? String ?? dict["thumb"] as? String
+            let leafCount = dict["leafCount"] as? Int
+            return MusicItem(
+                ratingKey: ratingKey,
+                title: title,
+                type: "playlist",
+                artist: leafCount != nil ? "\(leafCount!) tracks" : nil,
+                album: nil,
+                thumb: thumb,
+                duration: duration,
+                partKey: nil
+            )
+        }
+    }
+
+    /// Get tracks in a playlist
+    func getPlaylistItems(ratingKey: String) async -> [MusicItem] {
+        await getMetadataList("/playlists/\(ratingKey)/items")
+    }
+
+    /// Create a play queue from a playlist
+    func createPlaylistQueue(ratingKey: String, shuffle: Bool = false) async -> PlayQueueResult? {
+        guard let creds = credentials else { return nil }
+
+        var params = "type=audio&playlistID=\(ratingKey)"
+        if shuffle { params += "&shuffle=1" }
+
+        let urlString = "\(creds.serverUrl)/playQueues?\(params)&X-Plex-Token=\(creds.token)"
+        guard let url = URL(string: urlString) else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let container = json["MediaContainer"] as? [String: Any] else { return nil }
+
+            let queueId = container["playQueueID"] as? Int ?? 0
+            let metadata = container["Metadata"] as? [[String: Any]] ?? []
+            let items = metadata.compactMap { parseMusicItem($0) }
+
+            return PlayQueueResult(playQueueId: queueId, items: items)
+        } catch {
+            print("[PlexWatch] Create playlist queue error: \(error)")
+            return nil
+        }
+    }
+
     /// Search across all content
     func search(query: String) async -> [MusicItem] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
@@ -250,6 +316,7 @@ struct MusicItem: Identifiable {
     var isArtist: Bool { type == "artist" }
     var isAlbum: Bool { type == "album" }
     var isTrack: Bool { type == "track" }
+    var isPlaylist: Bool { type == "playlist" }
 
     var durationSeconds: Double { (duration ?? 0) / 1000.0 }
 
