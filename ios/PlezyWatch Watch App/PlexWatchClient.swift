@@ -409,4 +409,15 @@ struct MusicItem: Identifiable {
 struct PlayQueueResult {
     let playQueueId: Int
     let items: [MusicItem]
+
+    /// Build a PlayQueueReference from this result for queue refreshing
+    func toQueueReference(client: PlexWatchClient) -> PlayQueueReference? {
+        guard let creds = client.credentials else { return nil }
+        return PlayQueueReference(
+            playQueueId: playQueueId,
+            plexServerUrl: creds.serverUrl,
+            plexToken: creds.token,
+            currentIndex: 0
+        )
+    }
 }

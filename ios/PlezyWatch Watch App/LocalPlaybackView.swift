@@ -168,15 +168,16 @@ struct MainPlaybackPage: View {
 
     private func startRadio(from item: QueueItem) {
         Task {
-            guard let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.id) else {
+            let client = PlexWatchClient.shared
+            guard let result = await client.createRadioStation(ratingKey: item.id) else {
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
-            let client = PlexWatchClient.shared
             let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
             if !queueItems.isEmpty {
+                let queueRef = result.toQueueReference(client: client)
                 await MainActor.run {
-                    WatchAudioPlayer.shared.loadQueue(queueItems)
+                    WatchAudioPlayer.shared.loadQueue(queueItems, queueRef: queueRef)
                 }
             } else {
                 WKInterfaceDevice.current().play(.failure)

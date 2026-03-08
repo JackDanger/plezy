@@ -144,21 +144,22 @@ struct SearchView: View {
         WKInterfaceDevice.current().play(.click)
         errorMessage = nil
         Task {
-            guard let result = await PlexWatchClient.shared.createRadioStation(ratingKey: item.ratingKey) else {
+            let client = PlexWatchClient.shared
+            guard let result = await client.createRadioStation(ratingKey: item.ratingKey) else {
                 await MainActor.run { errorMessage = "Failed to start radio" }
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
-            let client = PlexWatchClient.shared
             let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
             if queueItems.isEmpty {
                 await MainActor.run { errorMessage = "No playable tracks" }
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
+            let queueRef = result.toQueueReference(client: client)
             await MainActor.run {
                 connectivity.startLocalPlayback()
-                WatchAudioPlayer.shared.loadQueue(queueItems)
+                WatchAudioPlayer.shared.loadQueue(queueItems, queueRef: queueRef)
             }
             RecentlyPlayedManager.shared.record(
                 ratingKey: item.ratingKey,

@@ -223,13 +223,13 @@ struct ArtistDetailView: View {
         isActioning = true
         errorMessage = nil
         Task {
-            guard let result = await PlexWatchClient.shared.createRadioStation(ratingKey: artist.ratingKey) else {
+            let client = PlexWatchClient.shared
+            guard let result = await client.createRadioStation(ratingKey: artist.ratingKey) else {
                 await MainActor.run { errorMessage = "Failed to create radio station"; isActioning = false }
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
 
-            let client = PlexWatchClient.shared
             let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
             print("[PlexWatch] Radio: \(result.items.count) items from API, \(queueItems.count) playable")
 
@@ -239,9 +239,10 @@ struct ArtistDetailView: View {
                 return
             }
 
+            let queueRef = result.toQueueReference(client: client)
             await MainActor.run {
                 connectivity.startLocalPlayback()
-                WatchAudioPlayer.shared.loadQueue(queueItems)
+                WatchAudioPlayer.shared.loadQueue(queueItems, queueRef: queueRef)
                 isActioning = false
             }
             RecentlyPlayedManager.shared.record(

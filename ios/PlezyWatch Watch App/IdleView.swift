@@ -214,9 +214,11 @@ struct IdleView: View {
 
             let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
             if !queueItems.isEmpty {
+                // For radio stations, store the queue ref so we can fetch more tracks
+                let queueRef = (item.type == .station) ? result.toQueueReference(client: client) : nil
                 await MainActor.run {
                     connectivity.startLocalPlayback()
-                    WatchAudioPlayer.shared.loadQueue(queueItems)
+                    WatchAudioPlayer.shared.loadQueue(queueItems, queueRef: queueRef)
                 }
             } else {
                 WKInterfaceDevice.current().play(.failure)

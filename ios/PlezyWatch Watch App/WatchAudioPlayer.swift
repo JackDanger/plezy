@@ -57,6 +57,7 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     // Original queue order (for un-shuffling)
     private var originalQueue: [QueueItem] = []
     private var shuffledIndices: [Int] = []
+    private var isFetchingMore = false
 
     // Play queue reference for refreshing from Plex
     var playQueueRef: PlayQueueReference?
@@ -220,10 +221,114 @@ class WatchAudioPlayer: NSObject, ObservableObject {
                 if let item = currentItem {
                     loadAndPlay(item)
                 }
+            } else if playQueueRef != nil {
+                // Radio/continuous queue — try to fetch more tracks from Plex
+                print("[WatchAudio] End of queue, fetching more tracks from Plex...")
+                fetchMoreTracks()
             } else {
                 isPlaying = false
                 updateNowPlayingInfo()
             }
+        }
+
+        // Pre-fetch more tracks when we're a few tracks from the end
+        if playQueueRef != nil && currentIndex >= queue.count - 3 && queue.count > 1 {
+            print("[WatchAudio] Near end of queue (\(currentIndex)/\(queue.count)), pre-fetching more...")
+            prefetchMoreTracks()
+        }
+    }
+
+    /// Fetch more tracks and continue playing (called when queue is exhausted)
+    private func fetchMoreTracks() {
+        isLoading = true
+        Task {
+            let success = await refreshQueueFromPlex()
+            await MainActor.run {
+                self.isLoading = false
+                if success && !self.queue.isEmpty {
+                    // Queue was replaced with fresh tracks — start from beginning
+                    self.currentIndex = 0
+                    if let item = self.currentItem {
+                        self.loadAndPlay(item)
+                    }
+                } else {
+                    print("[WatchAudio] Failed to fetch more tracks, stopping")
+                    self.isPlaying = false
+                    self.updateNowPlayingInfo()
+                }
+            }
+        }
+    }
+
+    /// Pre-fetch more tracks and append them to the current queue
+    private func prefetchMoreTracks() {
+        guard !isFetchingMore else { return }
+        isFetchingMore = true
+        Task {
+            let newItems = await fetchAdditionalTracks()
+            await MainActor.run {
+                self.isFetchingMore = false
+                if !newItems.isEmpty {
+                    self.queue.append(contentsOf: newItems)
+                    self.originalQueue.append(contentsOf: newItems)
+                    print("[WatchAudio] Appended \(newItems.count) tracks, queue now \(self.queue.count)")
+                }
+            }
+        }
+    }
+
+    /// Fetch additional tracks from the play queue without replacing current queue
+    private func fetchAdditionalTracks() async -> [QueueItem] {
+        guard let ref = playQueueRef else { return [] }
+
+        let urlString = "\(ref.plexServerUrl)/playQueues/\(ref.playQueueId)?X-Plex-Token=\(ref.plexToken)"
+        guard let url = URL(string: urlString) else { return [] }
+
+        do {
+            var request = URLRequest(url: url)
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else { return [] }
+
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let mediaContainer = json["MediaContainer"] as? [String: Any],
+                  let metadata = mediaContainer["Metadata"] as? [[String: Any]] else { return [] }
+
+            let existingIds = Set(queue.map { $0.id })
+            let audioTypes: Set<String> = ["track"]
+
+            return metadata.compactMap { item -> QueueItem? in
+                let itemType = item["type"] as? String ?? ""
+                guard audioTypes.contains(itemType) else { return nil }
+                guard let key = item["ratingKey"] as? String else { return nil }
+                // Skip tracks we already have
+                guard !existingIds.contains(key) else { return nil }
+                guard let title = item["title"] as? String else { return nil }
+                guard let media = (item["Media"] as? [[String: Any]])?.first,
+                      let part = (media["Part"] as? [[String: Any]])?.first,
+                      let partKey = part["key"] as? String else { return nil }
+
+                let streamUrl = "\(ref.plexServerUrl)\(partKey)?X-Plex-Token=\(ref.plexToken)"
+                var albumArtUrl: String?
+                if let thumb = item["thumb"] as? String {
+                    albumArtUrl = "\(ref.plexServerUrl)\(thumb)?X-Plex-Token=\(ref.plexToken)"
+                }
+
+                return QueueItem(from: [
+                    "id": key,
+                    "title": title,
+                    "artist": item["grandparentTitle"] ?? item["parentTitle"] ?? "",
+                    "albumArtUrl": albumArtUrl as Any,
+                    "streamUrl": streamUrl,
+                    "plexToken": ref.plexToken,
+                    "duration": (item["duration"] as? Double ?? 0) / 1000.0
+                ])
+            }
+        } catch {
+            print("[WatchAudio] Error fetching additional tracks: \(error)")
+            return []
         }
     }
 
@@ -604,6 +709,13 @@ struct PlayQueueReference {
     let plexServerUrl: String
     let plexToken: String
     let currentIndex: Int
+
+    init(playQueueId: Int, plexServerUrl: String, plexToken: String, currentIndex: Int) {
+        self.playQueueId = playQueueId
+        self.plexServerUrl = plexServerUrl
+        self.plexToken = plexToken
+        self.currentIndex = currentIndex
+    }
 
     init?(from dict: [String: Any]) {
         guard let id = dict["playQueueId"] as? Int,
