@@ -14,6 +14,7 @@ import '../mixins/item_updatable.dart';
 import '../i18n/strings.g.dart';
 import '../widgets/media_card.dart';
 import 'album_detail_screen.dart';
+import '../utils/video_player_navigation.dart' show navigateToAudioPlayer;
 
 class ArtistDetailScreen extends StatefulWidget {
   final PlexMetadata artist;
@@ -167,6 +168,41 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
     return _sourceLibrary?.isAudiobookLibrary ?? false;
   }
 
+  bool _isLoadingAllTracks = false;
+
+  Future<void> _playAll({bool shuffle = false}) async {
+    if (_albums.isEmpty) return;
+
+    setState(() => _isLoadingAllTracks = true);
+
+    try {
+      final allTracks = <PlexMetadata>[];
+      for (final album in _albums) {
+        final tracks = await _client.getChildren(album.ratingKey);
+        allTracks.addAll(tracks);
+      }
+
+      if (allTracks.isEmpty || !mounted) return;
+
+      if (shuffle) allTracks.shuffle();
+
+      await navigateToAudioPlayer(
+        context,
+        metadata: allTracks.first,
+        queue: allTracks,
+        startIndex: 0,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load tracks: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingAllTracks = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -258,6 +294,34 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
                       ),
                     ),
                   ),
+                  // Play/shuffle buttons for music artists
+                  if (!_isAudiobook && !_isLoadingAlbums && _albums.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: FilledButton.icon(
+                                onPressed: _isLoadingAllTracks ? null : () => _playAll(),
+                                icon: _isLoadingAllTracks
+                                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : const Icon(Icons.play_arrow),
+                                label: const Text('Play All'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: FilledButton.tonalIcon(
+                                onPressed: _isLoadingAllTracks ? null : () => _playAll(shuffle: true),
+                                icon: const Icon(Icons.shuffle),
+                                label: const Text('Shuffle'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   // Albums/Books section
                   SliverPadding(
                     padding: const EdgeInsets.all(16.0),

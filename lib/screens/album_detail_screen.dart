@@ -339,12 +339,14 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                       ),
                     ),
                   ),
-                  // Play button for audiobooks (show prominently if multiple tracks)
-                  if (_isAudiobook && _tracks.length > 1 && !_isLoadingTracks)
+                  // Play/shuffle buttons
+                  if (_tracks.length > 1 && !_isLoadingTracks)
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                        child: _buildResumeButton(theme),
+                        child: _isAudiobook
+                            ? _buildResumeButton(theme)
+                            : _buildPlayButtons(theme),
                       ),
                     ),
                   // Tracks/Chapters section
@@ -410,6 +412,41 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
               ),
             ),
       ),
+    );
+  }
+
+  Future<void> _playAll({bool shuffle = false}) async {
+    if (_tracks.isEmpty) return;
+    final tracks = List<PlexMetadata>.from(_tracks);
+    if (shuffle) tracks.shuffle();
+    await navigateToAudioPlayer(
+      context,
+      metadata: tracks.first,
+      queue: tracks,
+      startIndex: 0,
+    );
+    _loadTracks();
+  }
+
+  Widget _buildPlayButtons(ThemeData theme) {
+    return Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            onPressed: () => _playAll(),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Play'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            onPressed: () => _playAll(shuffle: true),
+            icon: const Icon(Icons.shuffle),
+            label: const Text('Shuffle'),
+          ),
+        ),
+      ],
     );
   }
 
