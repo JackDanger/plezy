@@ -1259,6 +1259,12 @@ class TranslationsMessagesEn {
 	/// en: 'No episodes found'
 	String get noEpisodesFoundGeneral => 'No episodes found';
 
+	/// en: 'No albums found'
+	String get noAlbumsFound => 'No albums found';
+
+	/// en: 'No tracks found'
+	String get noTracksFound => 'No tracks found';
+
 	/// en: 'No results found'
 	String get noResultsFound => 'No results found';
 
@@ -3328,6 +3334,8 @@ extension on Translations {
 			'messages.noSeasonsFound' => 'No seasons found',
 			'messages.noEpisodesFound' => 'No episodes found in first season',
 			'messages.noEpisodesFoundGeneral' => 'No episodes found',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'messages.noResultsFound' => 'No results found',
 			'messages.sleepTimerSet' => ({required Object label}) => 'Sleep timer set for ${label}',
 			'messages.noItemsAvailable' => 'No items available',
@@ -3468,10 +3476,10 @@ extension on Translations {
 			'liveTv.title' => 'Live TV',
 			'liveTv.channels' => 'Channels',
 			'liveTv.guide' => 'Guide',
-			'liveTv.noChannels' => 'No channels available',
-			'liveTv.noDvr' => 'No DVR configured on any server',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => 'No channels available',
+			'liveTv.noDvr' => 'No DVR configured on any server',
 			'liveTv.tuneFailed' => 'Failed to tune channel',
 			'liveTv.loading' => 'Loading channels...',
 			'liveTv.nowPlaying' => 'Now Playing',

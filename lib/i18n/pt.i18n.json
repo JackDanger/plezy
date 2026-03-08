@@ -412,7 +412,9 @@
     "switchingToCompatiblePlayer": "Alternando para player compatível...",
     "logsUploaded": "Logs enviados",
     "logsUploadFailed": "Falha ao enviar logs",
-    "logId": "ID do Log"
+    "logId": "ID do Log",
+    "noAlbumsFound": "No albums found",
+    "noTracksFound": "No tracks found"
   },
   "subtitlingStyling": {
     "stylingOptions": "Opções de Estilo",

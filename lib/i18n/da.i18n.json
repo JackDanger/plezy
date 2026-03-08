@@ -412,7 +412,9 @@
     "switchingToCompatiblePlayer": "Skifter til kompatibel afspiller...",
     "logsUploaded": "Logs uploadet",
     "logsUploadFailed": "Kunne ikke uploade logs",
-    "logId": "Log-ID"
+    "logId": "Log-ID",
+    "noAlbumsFound": "No albums found",
+    "noTracksFound": "No tracks found"
   },
   "subtitlingStyling": {
     "stylingOptions": "Stilindstillinger",

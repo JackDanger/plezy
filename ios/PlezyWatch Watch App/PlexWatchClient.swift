@@ -43,16 +43,28 @@ class PlexWatchClient {
     /// Fetch and cache the server's machine identifier (needed for radio stations)
     @discardableResult
     func fetchMachineIdentifier() async -> String? {
-        guard var creds = credentials else { return nil }
-        if creds.machineIdentifier != nil { return creds.machineIdentifier }
+        guard var creds = credentials else {
+            print("[PlexWatch] fetchMachineIdentifier: no credentials")
+            return nil
+        }
+        if let cached = creds.machineIdentifier {
+            print("[PlexWatch] fetchMachineIdentifier: using cached \(cached)")
+            return cached
+        }
 
-        guard let json = await get("/identity") else { return nil }
+        print("[PlexWatch] fetchMachineIdentifier: fetching from \(creds.serverUrl)/identity")
+        guard let json = await get("/identity") else {
+            print("[PlexWatch] fetchMachineIdentifier: /identity request failed")
+            return nil
+        }
         if let container = json["MediaContainer"] as? [String: Any],
            let machineId = container["machineIdentifier"] as? String {
             creds.machineIdentifier = machineId
             credentials = creds
+            print("[PlexWatch] fetchMachineIdentifier: got \(machineId)")
             return machineId
         }
+        print("[PlexWatch] fetchMachineIdentifier: unexpected response: \(json)")
         return nil
     }
 
@@ -145,7 +157,10 @@ class PlexWatchClient {
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let container = json["MediaContainer"] as? [String: Any] else { return nil }
 
-            let queueId = container["playQueueID"] as? Int ?? 0
+            guard let queueId = container["playQueueID"] as? Int, queueId > 0 else {
+                print("[PlexWatch] Create playlist queue: missing or invalid playQueueID")
+                return nil
+            }
             let metadata = container["Metadata"] as? [[String: Any]] ?? []
             let items = metadata.compactMap { parseMusicItem($0) }
 
@@ -174,14 +189,25 @@ class PlexWatchClient {
 
     /// Create a play queue from a track/album/artist URI
     func createPlayQueue(uri: String, shuffle: Bool = false, continuous: Bool = false) async -> PlayQueueResult? {
-        guard let creds = credentials else { return nil }
+        guard let creds = credentials else {
+            print("[PlexWatch] No credentials for createPlayQueue")
+            return nil
+        }
 
-        var params = "type=audio&uri=\(uri)"
-        if shuffle { params += "&shuffle=1" }
-        if continuous { params += "&continuous=1" }
+        var components = URLComponents(string: "\(creds.serverUrl)/playQueues")
+        var queryItems = [
+            URLQueryItem(name: "type", value: "audio"),
+            URLQueryItem(name: "uri", value: uri),
+            URLQueryItem(name: "X-Plex-Token", value: creds.token),
+        ]
+        if shuffle { queryItems.append(URLQueryItem(name: "shuffle", value: "1")) }
+        if continuous { queryItems.append(URLQueryItem(name: "continuous", value: "1")) }
+        components?.queryItems = queryItems
 
-        let urlString = "\(creds.serverUrl)/playQueues?\(params)&X-Plex-Token=\(creds.token)"
-        guard let url = URL(string: urlString) else { return nil }
+        guard let url = components?.url else {
+            print("[PlexWatch] Failed to build play queue URL")
+            return nil
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -189,13 +215,25 @@ class PlexWatchClient {
 
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            guard let http = response as? HTTPURLResponse else { return nil }
+            guard http.statusCode == 200 else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                print("[PlexWatch] Create queue HTTP \(http.statusCode): \(body.prefix(200))")
+                return nil
+            }
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let container = json["MediaContainer"] as? [String: Any] else { return nil }
+                  let container = json["MediaContainer"] as? [String: Any] else {
+                print("[PlexWatch] Create queue: unexpected JSON structure")
+                return nil
+            }
 
-            let queueId = container["playQueueID"] as? Int ?? 0
+            guard let queueId = container["playQueueID"] as? Int, queueId > 0 else {
+                print("[PlexWatch] Create queue: missing or invalid playQueueID")
+                return nil
+            }
             let metadata = container["Metadata"] as? [[String: Any]] ?? []
             let items = metadata.compactMap { parseMusicItem($0) }
+            print("[PlexWatch] Created queue \(queueId) with \(items.count) items")
 
             return PlayQueueResult(playQueueId: queueId, items: items)
         } catch {
@@ -213,16 +251,19 @@ class PlexWatchClient {
         }
 
         let uri = "server://\(machineId)/com.plexapp.plugins.library/library/metadata/\(ratingKey)/station"
-        guard let encoded = uri.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
-        return await createPlayQueue(uri: encoded, shuffle: true, continuous: true)
+        print("[PlexWatch] Creating radio station with uri: \(uri)")
+        return await createPlayQueue(uri: uri, shuffle: true, continuous: true)
     }
 
     /// Create a play queue for an album or artist (play all tracks)
     func createPlayAllQueue(ratingKey: String, type: String = "audio") async -> PlayQueueResult? {
-        guard let machineId = await fetchMachineIdentifier() else { return nil }
+        guard let machineId = await fetchMachineIdentifier() else {
+            print("[PlexWatch] No machine identifier for play all")
+            return nil
+        }
         let uri = "server://\(machineId)/com.plexapp.plugins.library/library/metadata/\(ratingKey)"
-        guard let encoded = uri.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return nil }
-        return await createPlayQueue(uri: encoded)
+        print("[PlexWatch] Creating play all queue with uri: \(uri)")
+        return await createPlayQueue(uri: uri)
     }
 
     /// Build a stream URL for a track
@@ -241,17 +282,31 @@ class PlexWatchClient {
     // MARK: - Private
 
     private func get(_ path: String) async -> [String: Any]? {
-        guard let creds = credentials else { return nil }
+        guard let creds = credentials else {
+            print("[PlexWatch] GET \(path): no credentials")
+            return nil
+        }
         let separator = path.contains("?") ? "&" : "?"
         let urlString = "\(creds.serverUrl)\(path)\(separator)X-Plex-Token=\(creds.token)"
-        guard let url = URL(string: urlString) else { return nil }
+        guard let url = URL(string: urlString) else {
+            print("[PlexWatch] GET \(path): invalid URL")
+            return nil
+        }
 
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         do {
             let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return nil }
+            guard let http = response as? HTTPURLResponse else {
+                print("[PlexWatch] GET \(path): no HTTP response")
+                return nil
+            }
+            guard http.statusCode == 200 else {
+                let body = String(data: data, encoding: .utf8) ?? ""
+                print("[PlexWatch] GET \(path): HTTP \(http.statusCode) \(body.prefix(200))")
+                return nil
+            }
             return try JSONSerialization.jsonObject(with: data) as? [String: Any]
         } catch {
             print("[PlexWatch] GET \(path) error: \(error)")

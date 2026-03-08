@@ -574,6 +574,8 @@ class _TranslationsMessagesDa implements TranslationsMessagesEn {
 	@override String get logsUploaded => 'Logs uploadet';
 	@override String get logsUploadFailed => 'Kunne ikke uploade logs';
 	@override String get logId => 'Log-ID';
+	@override String get noAlbumsFound => 'No albums found';
+	@override String get noTracksFound => 'No tracks found';
 }
 
 // Path: subtitlingStyling
@@ -1694,6 +1696,8 @@ extension on TranslationsDa {
 			'messages.logsUploaded' => 'Logs uploadet',
 			'messages.logsUploadFailed' => 'Kunne ikke uploade logs',
 			'messages.logId' => 'Log-ID',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'subtitlingStyling.stylingOptions' => 'Stilindstillinger',
 			'subtitlingStyling.fontSize' => 'Skriftstørrelse',
 			'subtitlingStyling.textColor' => 'Tekstfarve',
@@ -1825,10 +1829,10 @@ extension on TranslationsDa {
 			'liveTv.title' => 'Live TV',
 			'liveTv.channels' => 'Kanaler',
 			'liveTv.guide' => 'Guide',
-			'liveTv.noChannels' => 'Ingen kanaler tilgængelige',
-			'liveTv.noDvr' => 'Ingen DVR konfigureret på nogen server',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => 'Ingen kanaler tilgængelige',
+			'liveTv.noDvr' => 'Ingen DVR konfigureret på nogen server',
 			'liveTv.tuneFailed' => 'Kunne ikke tune kanal',
 			'liveTv.loading' => 'Indlæser kanaler...',
 			'liveTv.nowPlaying' => 'Afspiller nu',

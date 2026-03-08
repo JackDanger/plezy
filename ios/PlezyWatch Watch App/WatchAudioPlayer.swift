@@ -249,8 +249,16 @@ class WatchAudioPlayer: NSObject, ObservableObject {
                 return false
             }
 
-            // Convert metadata to QueueItems
+            // Convert metadata to QueueItems, filtering out video content
+            let audioTypes: Set<String> = ["track"]
             let items = metadata.compactMap { item -> QueueItem? in
+                // Skip non-audio items (movies, episodes, clips)
+                let itemType = item["type"] as? String ?? ""
+                if !audioTypes.contains(itemType) {
+                    print("[WatchAudio] Skipping non-audio item: \(item["title"] ?? "?") (type: \(itemType))")
+                    return nil
+                }
+
                 guard let key = item["ratingKey"] as? String,
                       let title = item["title"] as? String else { return nil }
 
@@ -534,13 +542,21 @@ struct QueueItem: Identifiable, Codable {
     let plexToken: String
     let duration: Double
 
-    init(from dict: [String: Any]) {
+    init?(from dict: [String: Any]) {
+        guard let streamUrl = dict["streamUrl"] as? String, !streamUrl.isEmpty else {
+            print("[WatchAudio] QueueItem init failed: missing streamUrl")
+            return nil
+        }
+        guard let plexToken = dict["plexToken"] as? String, !plexToken.isEmpty else {
+            print("[WatchAudio] QueueItem init failed: missing plexToken")
+            return nil
+        }
         self.id = dict["id"] as? String ?? UUID().uuidString
         self.title = dict["title"] as? String ?? "Unknown"
         self.artist = dict["artist"] as? String
         self.albumArtUrl = dict["albumArtUrl"] as? String
-        self.streamUrl = dict["streamUrl"] as? String ?? ""
-        self.plexToken = dict["plexToken"] as? String ?? ""
+        self.streamUrl = streamUrl
+        self.plexToken = plexToken
         self.duration = dict["duration"] as? Double ?? 0
     }
 }

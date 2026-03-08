@@ -376,7 +376,7 @@ class _AlbumDetailScreenState extends State<AlbumDetailScreen>
                         child: Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Text(
-                            t.messages.noEpisodesFoundGeneral,
+                            t.messages.noTracksFound,
                             style: theme.textTheme.bodyLarge,
                           ),
                         ),

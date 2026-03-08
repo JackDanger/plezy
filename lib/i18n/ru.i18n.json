@@ -412,7 +412,9 @@
     "switchingToCompatiblePlayer": "Переключение на совместимый плеер...",
     "logsUploaded": "Логи загружены",
     "logsUploadFailed": "Не удалось загрузить логи",
-    "logId": "ID лога"
+    "logId": "ID лога",
+    "noAlbumsFound": "No albums found",
+    "noTracksFound": "No tracks found"
   },
   "subtitlingStyling": {
     "stylingOptions": "Параметры стиля",

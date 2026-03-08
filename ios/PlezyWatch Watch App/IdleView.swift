@@ -89,6 +89,10 @@ struct IdleView: View {
             NavigationLink(destination: SearchView()) {
                 Label("Search", systemImage: "magnifyingglass")
             }
+            Text("Build: \(BuildInfo.stamp)")
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
+                .listRowBackground(Color.clear)
         }
     }
 
@@ -181,6 +185,10 @@ struct IdleView: View {
             }
             .foregroundStyle(.secondary)
             .listRowBackground(Color.clear)
+            Text("Build: \(BuildInfo.stamp)")
+                .font(.system(size: 9))
+                .foregroundStyle(.tertiary)
+                .listRowBackground(Color.clear)
         }
     }
 

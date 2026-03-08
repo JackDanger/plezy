@@ -109,6 +109,10 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
       // Load source library for audiobook detection
       await _loadSourceLibrary();
 
+      if (albums.isEmpty) {
+        debugPrint('[ArtistDetail] getChildren returned empty for ratingKey=${widget.artist.ratingKey} (${widget.artist.title})');
+      }
+
       setState(() {
         _albums = albums;
         _isLoadingAlbums = false;
@@ -121,6 +125,7 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
         });
       }
     } catch (e) {
+      debugPrint('[ArtistDetail] _loadAlbums error: $e');
       setState(() {
         _isLoadingAlbums = false;
       });
@@ -349,7 +354,7 @@ class _ArtistDetailScreenState extends State<ArtistDetailScreen>
                         child: Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Text(
-                            t.messages.noEpisodesFoundGeneral,
+                            t.messages.noAlbumsFound,
                             style: theme.textTheme.bodyLarge,
                           ),
                         ),

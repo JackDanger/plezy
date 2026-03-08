@@ -412,7 +412,9 @@
     "switchingToCompatiblePlayer": "호환되는 플레이어로 전환 중...",
     "logsUploaded": "Logs uploaded",
     "logsUploadFailed": "Failed to upload logs",
-    "logId": "Log ID"
+    "logId": "Log ID",
+    "noAlbumsFound": "No albums found",
+    "noTracksFound": "No tracks found"
   },
   "subtitlingStyling": {
     "stylingOptions": "스타일 옵션",

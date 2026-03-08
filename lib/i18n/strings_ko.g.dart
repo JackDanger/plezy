@@ -574,6 +574,8 @@ class _TranslationsMessagesKo implements TranslationsMessagesEn {
 	@override String get logsUploaded => 'Logs uploaded';
 	@override String get logsUploadFailed => 'Failed to upload logs';
 	@override String get logId => 'Log ID';
+	@override String get noAlbumsFound => 'No albums found';
+	@override String get noTracksFound => 'No tracks found';
 }
 
 // Path: subtitlingStyling
@@ -1694,6 +1696,8 @@ extension on TranslationsKo {
 			'messages.logsUploaded' => 'Logs uploaded',
 			'messages.logsUploadFailed' => 'Failed to upload logs',
 			'messages.logId' => 'Log ID',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'subtitlingStyling.stylingOptions' => '스타일 옵션',
 			'subtitlingStyling.fontSize' => '글자 크기',
 			'subtitlingStyling.textColor' => '텍스트 색상',
@@ -1825,10 +1829,10 @@ extension on TranslationsKo {
 			'liveTv.title' => '실시간 TV',
 			'liveTv.channels' => '채널',
 			'liveTv.guide' => '편성표',
-			'liveTv.noChannels' => '사용 가능한 채널이 없습니다',
-			'liveTv.noDvr' => '서버에 DVR이 구성되어 있지 않습니다',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => '사용 가능한 채널이 없습니다',
+			'liveTv.noDvr' => '서버에 DVR이 구성되어 있지 않습니다',
 			'liveTv.tuneFailed' => '채널 튜닝에 실패했습니다',
 			'liveTv.loading' => '채널 로딩 중...',
 			'liveTv.nowPlaying' => '현재 재생 중',

@@ -196,13 +196,13 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
-            let items = queueData.map { QueueItem(from: $0) }
+            let items = queueData.compactMap { QueueItem(from: $0) }
 
             if !items.isEmpty {
                 self.hasLocalQueue = true
                 self.appMode = .localPlaying
                 self.errorMessage = nil
-                self.debugInfo = "Playing \(items.count) items" + (playQueueRef != nil ? " (ref: \(playQueueRef!.playQueueId))" : "")
+                self.debugInfo = "Playing \(items.count) items" + (playQueueRef.map { " (ref: \($0.playQueueId))" } ?? "")
                 self.audioPlayer.loadQueue(items, startIndex: startIndex, queueRef: playQueueRef)
             } else if playQueueRef != nil {
                 // Have a reference but no items - try to fetch from Plex

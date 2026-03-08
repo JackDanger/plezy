@@ -22,9 +22,7 @@ class RecentlyPlayedManager: ObservableObject {
 
         var id: String { ratingKey }
 
-        static func == (lhs: RecentItem, rhs: RecentItem) -> Bool {
-            lhs.ratingKey == rhs.ratingKey
-        }
+        // Synthesized Equatable compares all fields
     }
 
     enum RecentItemType: String, Codable {

@@ -574,6 +574,8 @@ class _TranslationsMessagesSv implements TranslationsMessagesEn {
 	@override String get logsUploaded => 'Logs uploaded';
 	@override String get logsUploadFailed => 'Failed to upload logs';
 	@override String get logId => 'Log ID';
+	@override String get noAlbumsFound => 'No albums found';
+	@override String get noTracksFound => 'No tracks found';
 }
 
 // Path: subtitlingStyling
@@ -1694,6 +1696,8 @@ extension on TranslationsSv {
 			'messages.logsUploaded' => 'Logs uploaded',
 			'messages.logsUploadFailed' => 'Failed to upload logs',
 			'messages.logId' => 'Log ID',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'subtitlingStyling.stylingOptions' => 'Stilalternativ',
 			'subtitlingStyling.fontSize' => 'Teckenstorlek',
 			'subtitlingStyling.textColor' => 'Textfärg',
@@ -1825,10 +1829,10 @@ extension on TranslationsSv {
 			'liveTv.title' => 'Live-TV',
 			'liveTv.channels' => 'Kanaler',
 			'liveTv.guide' => 'Programguide',
-			'liveTv.noChannels' => 'Inga kanaler tillgängliga',
-			'liveTv.noDvr' => 'Ingen DVR konfigurerad på någon server',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => 'Inga kanaler tillgängliga',
+			'liveTv.noDvr' => 'Ingen DVR konfigurerad på någon server',
 			'liveTv.tuneFailed' => 'Kunde inte ställa in kanalen',
 			'liveTv.loading' => 'Laddar kanaler...',
 			'liveTv.nowPlaying' => 'Spelas nu',

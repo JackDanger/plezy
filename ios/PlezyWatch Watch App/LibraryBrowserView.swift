@@ -112,6 +112,8 @@ struct ArtistDetailView: View {
     let artist: MusicItem
     @State private var albums: [MusicItem] = []
     @State private var isLoading = true
+    @State private var isActioning = false
+    @State private var errorMessage: String?
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
@@ -120,16 +122,31 @@ struct ArtistDetailView: View {
                 ProgressView()
             } else {
                 List {
+                    if let errorMessage {
+                        Section {
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+
                     Section {
                         Button(action: { playAll(shuffle: false) }) {
-                            Label("Play All", systemImage: "play.fill")
+                            if isActioning {
+                                ProgressView()
+                            } else {
+                                Label("Play All", systemImage: "play.fill")
+                            }
                         }
+                        .disabled(isActioning)
                         Button(action: { playAll(shuffle: true) }) {
                             Label("Shuffle All", systemImage: "shuffle")
                         }
+                        .disabled(isActioning)
                         Button(action: { startRadio() }) {
                             Label("Artist Radio", systemImage: "antenna.radiowaves.left.and.right")
                         }
+                        .disabled(isActioning)
                     }
 
                     Section("Albums") {
@@ -159,46 +176,80 @@ struct ArtistDetailView: View {
 
     private func playAll(shuffle: Bool) {
         WKInterfaceDevice.current().play(.click)
+        isActioning = true
+        errorMessage = nil
         Task {
-            if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: artist.ratingKey) {
-                let client = PlexWatchClient.shared
-                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
-                if !queueItems.isEmpty {
-                    await MainActor.run {
-                        connectivity.startLocalPlayback()
-                        WatchAudioPlayer.shared.loadQueue(queueItems)
-                        if shuffle { WatchAudioPlayer.shared.toggleShuffle() }
-                    }
-                    RecentlyPlayedManager.shared.record(
-                        ratingKey: artist.ratingKey,
-                        title: artist.title,
-                        type: .artist,
-                        thumb: albums.first?.thumb ?? artist.thumb
-                    )
-                }
+            guard PlexWatchClient.shared.hasCredentials else {
+                await MainActor.run { errorMessage = "No server credentials"; isActioning = false }
+                return
             }
+
+            guard let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: artist.ratingKey) else {
+                await MainActor.run { errorMessage = "Failed to create play queue"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            let client = PlexWatchClient.shared
+            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            print("[PlexWatch] Play all: \(result.items.count) items from API, \(queueItems.count) playable")
+
+            if queueItems.isEmpty {
+                for item in result.items {
+                    print("[PlexWatch] Item '\(item.title)' partKey=\(item.partKey ?? "nil") type=\(item.type)")
+                }
+                await MainActor.run { errorMessage = "No playable tracks found (\(result.items.count) items had no stream info)"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            await MainActor.run {
+                connectivity.startLocalPlayback()
+                WatchAudioPlayer.shared.loadQueue(queueItems)
+                if shuffle { WatchAudioPlayer.shared.toggleShuffle() }
+                isActioning = false
+            }
+            RecentlyPlayedManager.shared.record(
+                ratingKey: artist.ratingKey,
+                title: artist.title,
+                type: .artist,
+                thumb: albums.first?.thumb ?? artist.thumb
+            )
         }
     }
 
     private func startRadio() {
         WKInterfaceDevice.current().play(.click)
+        isActioning = true
+        errorMessage = nil
         Task {
-            if let result = await PlexWatchClient.shared.createRadioStation(ratingKey: artist.ratingKey) {
-                let client = PlexWatchClient.shared
-                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
-                if !queueItems.isEmpty {
-                    await MainActor.run {
-                        connectivity.startLocalPlayback()
-                        WatchAudioPlayer.shared.loadQueue(queueItems)
-                    }
-                    RecentlyPlayedManager.shared.record(
-                        ratingKey: artist.ratingKey,
-                        title: artist.title,
-                        type: .station,
-                        thumb: albums.first?.thumb ?? artist.thumb
-                    )
-                }
+            guard let result = await PlexWatchClient.shared.createRadioStation(ratingKey: artist.ratingKey) else {
+                await MainActor.run { errorMessage = "Failed to create radio station"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
             }
+
+            let client = PlexWatchClient.shared
+            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            print("[PlexWatch] Radio: \(result.items.count) items from API, \(queueItems.count) playable")
+
+            if queueItems.isEmpty {
+                await MainActor.run { errorMessage = "No playable tracks"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            await MainActor.run {
+                connectivity.startLocalPlayback()
+                WatchAudioPlayer.shared.loadQueue(queueItems)
+                isActioning = false
+            }
+            RecentlyPlayedManager.shared.record(
+                ratingKey: artist.ratingKey,
+                title: artist.title,
+                type: .station,
+                thumb: albums.first?.thumb ?? artist.thumb
+            )
         }
     }
 }
@@ -411,6 +462,8 @@ struct TrackListView: View {
     let albumTitle: String
     @State private var tracks: [MusicItem] = []
     @State private var isLoading = true
+    @State private var isActioning = false
+    @State private var errorMessage: String?
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
@@ -419,13 +472,27 @@ struct TrackListView: View {
                 ProgressView()
             } else {
                 List {
+                    if let errorMessage {
+                        Section {
+                            Text(errorMessage)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+
                     Section {
                         Button(action: { playAlbum(shuffle: false) }) {
-                            Label("Play", systemImage: "play.fill")
+                            if isActioning {
+                                ProgressView()
+                            } else {
+                                Label("Play", systemImage: "play.fill")
+                            }
                         }
+                        .disabled(isActioning)
                         Button(action: { playAlbum(shuffle: true) }) {
                             Label("Shuffle", systemImage: "shuffle")
                         }
+                        .disabled(isActioning)
                     }
 
                     Section {
@@ -458,39 +525,71 @@ struct TrackListView: View {
 
     private func playAlbum(shuffle: Bool) {
         WKInterfaceDevice.current().play(.click)
+        isActioning = true
+        errorMessage = nil
         Task {
-            if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: albumKey) {
-                let client = PlexWatchClient.shared
-                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
-                if !queueItems.isEmpty {
-                    await MainActor.run {
-                        connectivity.startLocalPlayback()
-                        WatchAudioPlayer.shared.loadQueue(queueItems)
-                        if shuffle { WatchAudioPlayer.shared.toggleShuffle() }
-                    }
-                    RecentlyPlayedManager.shared.record(
-                        ratingKey: albumKey,
-                        title: albumTitle,
-                        type: .album,
-                        thumb: tracks.first?.thumb
-                    )
-                }
+            guard PlexWatchClient.shared.hasCredentials else {
+                await MainActor.run { errorMessage = "No server credentials"; isActioning = false }
+                return
             }
+
+            guard let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: albumKey) else {
+                await MainActor.run { errorMessage = "Failed to create play queue"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            let client = PlexWatchClient.shared
+            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            print("[PlexWatch] Album play: \(result.items.count) items, \(queueItems.count) playable")
+
+            if queueItems.isEmpty {
+                for item in result.items {
+                    print("[PlexWatch] Item '\(item.title)' partKey=\(item.partKey ?? "nil") type=\(item.type)")
+                }
+                await MainActor.run { errorMessage = "No playable tracks (\(result.items.count) items had no stream)"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            await MainActor.run {
+                connectivity.startLocalPlayback()
+                WatchAudioPlayer.shared.loadQueue(queueItems)
+                if shuffle { WatchAudioPlayer.shared.toggleShuffle() }
+                isActioning = false
+            }
+            RecentlyPlayedManager.shared.record(
+                ratingKey: albumKey,
+                title: albumTitle,
+                type: .album,
+                thumb: tracks.first?.thumb
+            )
         }
     }
 
     private func playFrom(index: Int) {
         WKInterfaceDevice.current().play(.click)
+        isActioning = true
+        errorMessage = nil
         Task {
-            if let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: albumKey) {
-                let client = PlexWatchClient.shared
-                let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
-                if !queueItems.isEmpty {
-                    await MainActor.run {
-                        connectivity.startLocalPlayback()
-                        WatchAudioPlayer.shared.loadQueue(queueItems, startIndex: min(index, queueItems.count - 1))
-                    }
-                }
+            guard let result = await PlexWatchClient.shared.createPlayAllQueue(ratingKey: albumKey) else {
+                await MainActor.run { errorMessage = "Failed to create play queue"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            let client = PlexWatchClient.shared
+            let queueItems = result.items.compactMap { $0.toQueueItem(client: client) }
+            if queueItems.isEmpty {
+                await MainActor.run { errorMessage = "No playable tracks"; isActioning = false }
+                WKInterfaceDevice.current().play(.failure)
+                return
+            }
+
+            await MainActor.run {
+                connectivity.startLocalPlayback()
+                WatchAudioPlayer.shared.loadQueue(queueItems, startIndex: min(index, queueItems.count - 1))
+                isActioning = false
             }
         }
     }

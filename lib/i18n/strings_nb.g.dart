@@ -574,6 +574,8 @@ class _TranslationsMessagesNb implements TranslationsMessagesEn {
 	@override String get logsUploaded => 'Logger lastet opp';
 	@override String get logsUploadFailed => 'Kunne ikke laste opp logger';
 	@override String get logId => 'Logg-ID';
+	@override String get noAlbumsFound => 'No albums found';
+	@override String get noTracksFound => 'No tracks found';
 }
 
 // Path: subtitlingStyling
@@ -1694,6 +1696,8 @@ extension on TranslationsNb {
 			'messages.logsUploaded' => 'Logger lastet opp',
 			'messages.logsUploadFailed' => 'Kunne ikke laste opp logger',
 			'messages.logId' => 'Logg-ID',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'subtitlingStyling.stylingOptions' => 'Stilalternativer',
 			'subtitlingStyling.fontSize' => 'Skriftstørrelse',
 			'subtitlingStyling.textColor' => 'Tekstfarge',
@@ -1825,10 +1829,10 @@ extension on TranslationsNb {
 			'liveTv.title' => 'Direkte-TV',
 			'liveTv.channels' => 'Kanaler',
 			'liveTv.guide' => 'Programguide',
-			'liveTv.noChannels' => 'Ingen kanaler tilgjengelig',
-			'liveTv.noDvr' => 'Ingen DVR konfigurert på noen server',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => 'Ingen kanaler tilgjengelig',
+			'liveTv.noDvr' => 'Ingen DVR konfigurert på noen server',
 			'liveTv.tuneFailed' => 'Kunne ikke stille inn kanal',
 			'liveTv.loading' => 'Laster kanaler...',
 			'liveTv.nowPlaying' => 'Spilles nå',

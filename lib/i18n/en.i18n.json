@@ -404,6 +404,8 @@
     "noSeasonsFound": "No seasons found",
     "noEpisodesFound": "No episodes found in first season",
     "noEpisodesFoundGeneral": "No episodes found",
+    "noAlbumsFound": "No albums found",
+    "noTracksFound": "No tracks found",
     "noResultsFound": "No results found",
     "sleepTimerSet": "Sleep timer set for ${label}",
     "noItemsAvailable": "No items available",

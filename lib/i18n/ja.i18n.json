@@ -412,7 +412,9 @@
     "switchingToCompatiblePlayer": "互換プレーヤーに切替中...",
     "logsUploaded": "ログをアップロードしました",
     "logsUploadFailed": "ログのアップロードに失敗しました",
-    "logId": "ログID"
+    "logId": "ログID",
+    "noAlbumsFound": "No albums found",
+    "noTracksFound": "No tracks found"
   },
   "subtitlingStyling": {
     "stylingOptions": "スタイルオプション",

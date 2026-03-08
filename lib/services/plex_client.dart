@@ -926,7 +926,18 @@ class PlexClient {
           cacheKey: endpoint,
           networkCall: () => _dio.get(endpoint),
           parseCache: (cachedData) => _parseMetadataListFromCachedResponse(cachedData),
-          parseResponse: (response) => _extractMetadataList(response),
+          parseResponse: (response) {
+            final result = _extractMetadataList(response);
+            if (result.isEmpty) {
+              final container = _getMediaContainer(response);
+              if (container != null) {
+                appLogger.w('getChildren($ratingKey) returned empty Metadata. Container keys: ${container.keys.toList()}, size: ${container['size']}');
+              } else {
+                appLogger.w('getChildren($ratingKey) returned no MediaContainer. Response type: ${response.data?.runtimeType}');
+              }
+            }
+            return result;
+          },
         ) ??
         [];
   }

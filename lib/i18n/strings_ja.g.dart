@@ -574,6 +574,8 @@ class _TranslationsMessagesJa implements TranslationsMessagesEn {
 	@override String get logsUploaded => 'ログをアップロードしました';
 	@override String get logsUploadFailed => 'ログのアップロードに失敗しました';
 	@override String get logId => 'ログID';
+	@override String get noAlbumsFound => 'No albums found';
+	@override String get noTracksFound => 'No tracks found';
 }
 
 // Path: subtitlingStyling
@@ -1694,6 +1696,8 @@ extension on TranslationsJa {
 			'messages.logsUploaded' => 'ログをアップロードしました',
 			'messages.logsUploadFailed' => 'ログのアップロードに失敗しました',
 			'messages.logId' => 'ログID',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'subtitlingStyling.stylingOptions' => 'スタイルオプション',
 			'subtitlingStyling.fontSize' => 'フォントサイズ',
 			'subtitlingStyling.textColor' => 'テキストの色',
@@ -1825,10 +1829,10 @@ extension on TranslationsJa {
 			'liveTv.title' => 'ライブTV',
 			'liveTv.channels' => 'チャンネル',
 			'liveTv.guide' => '番組表',
-			'liveTv.noChannels' => 'チャンネルがありません',
-			'liveTv.noDvr' => 'どのサーバーにもDVRが設定されていません',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => 'チャンネルがありません',
+			'liveTv.noDvr' => 'どのサーバーにもDVRが設定されていません',
 			'liveTv.tuneFailed' => 'チャンネルのチューニングに失敗しました',
 			'liveTv.loading' => 'チャンネルを読み込み中...',
 			'liveTv.nowPlaying' => '現在放送中',

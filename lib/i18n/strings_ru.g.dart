@@ -574,6 +574,8 @@ class _TranslationsMessagesRu implements TranslationsMessagesEn {
 	@override String get logsUploaded => 'Логи загружены';
 	@override String get logsUploadFailed => 'Не удалось загрузить логи';
 	@override String get logId => 'ID лога';
+	@override String get noAlbumsFound => 'No albums found';
+	@override String get noTracksFound => 'No tracks found';
 }
 
 // Path: subtitlingStyling
@@ -1694,6 +1696,8 @@ extension on TranslationsRu {
 			'messages.logsUploaded' => 'Логи загружены',
 			'messages.logsUploadFailed' => 'Не удалось загрузить логи',
 			'messages.logId' => 'ID лога',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'subtitlingStyling.stylingOptions' => 'Параметры стиля',
 			'subtitlingStyling.fontSize' => 'Размер шрифта',
 			'subtitlingStyling.textColor' => 'Цвет текста',
@@ -1825,10 +1829,10 @@ extension on TranslationsRu {
 			'liveTv.title' => 'ТВ в прямом эфире',
 			'liveTv.channels' => 'Каналы',
 			'liveTv.guide' => 'Программа',
-			'liveTv.noChannels' => 'Нет доступных каналов',
-			'liveTv.noDvr' => 'DVR не настроен ни на одном сервере',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => 'Нет доступных каналов',
+			'liveTv.noDvr' => 'DVR не настроен ни на одном сервере',
 			'liveTv.tuneFailed' => 'Не удалось настроить канал',
 			'liveTv.loading' => 'Загрузка каналов...',
 			'liveTv.nowPlaying' => 'Сейчас воспроизводится',

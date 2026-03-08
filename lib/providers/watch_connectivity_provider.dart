@@ -263,13 +263,20 @@ class WatchConnectivityProvider with ChangeNotifier {
   }
   
   /// Create a WatchQueueItem from PlexMetadata
+  /// Returns null for non-audio items (movies, episodes, etc.) since the watch can only play audio
   Future<WatchQueueItem?> _createQueueItemFromMetadata(
     PlexMetadata metadata, {
     PlexClient? client,
   }) async {
+    // Watch can only play audio — skip video content entirely
+    if (metadata.mediaType.isVideo) {
+      appLogger.d('[WatchProvider] Skipping video item: ${metadata.title} (${metadata.type})');
+      return null;
+    }
+
     final useClient = client ?? _client;
     if (useClient == null) return null;
-    
+
     // Get the direct stream URL
     final streamUrl = await useClient.getDirectStreamUrl(metadata.ratingKey);
     if (streamUrl == null) {

@@ -574,6 +574,8 @@ class _TranslationsMessagesZh implements TranslationsMessagesEn {
 	@override String get logsUploaded => 'Logs uploaded';
 	@override String get logsUploadFailed => 'Failed to upload logs';
 	@override String get logId => 'Log ID';
+	@override String get noAlbumsFound => 'No albums found';
+	@override String get noTracksFound => 'No tracks found';
 }
 
 // Path: subtitlingStyling
@@ -1694,6 +1696,8 @@ extension on TranslationsZh {
 			'messages.logsUploaded' => 'Logs uploaded',
 			'messages.logsUploadFailed' => 'Failed to upload logs',
 			'messages.logId' => 'Log ID',
+			'messages.noAlbumsFound' => 'No albums found',
+			'messages.noTracksFound' => 'No tracks found',
 			'subtitlingStyling.stylingOptions' => '样式选项',
 			'subtitlingStyling.fontSize' => '字号',
 			'subtitlingStyling.textColor' => '文本颜色',
@@ -1825,10 +1829,10 @@ extension on TranslationsZh {
 			'liveTv.title' => '电视直播',
 			'liveTv.channels' => '频道',
 			'liveTv.guide' => '节目指南',
-			'liveTv.noChannels' => '没有可用的频道',
-			'liveTv.noDvr' => '没有服务器配置了DVR',
 			_ => null,
 		} ?? switch (path) {
+			'liveTv.noChannels' => '没有可用的频道',
+			'liveTv.noDvr' => '没有服务器配置了DVR',
 			'liveTv.tuneFailed' => '无法调谐频道',
 			'liveTv.loading' => '正在加载频道...',
 			'liveTv.nowPlaying' => '正在播放',
