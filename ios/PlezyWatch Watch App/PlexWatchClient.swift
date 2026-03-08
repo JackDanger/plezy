@@ -303,24 +303,37 @@ class PlexWatchClient {
 
     /// Fetch the partKey for a track by loading its full metadata
     func fetchPartKey(ratingKey: String) async -> String? {
-        guard let json = await get("/library/metadata/\(ratingKey)") else { return nil }
+        guard let json = await get("/library/metadata/\(ratingKey)") else {
+            print("[PlexWatch] fetchPartKey(\(ratingKey)): GET failed")
+            return nil
+        }
         guard let container = json["MediaContainer"] as? [String: Any],
               let metadata = container["Metadata"] as? [[String: Any]],
-              let track = metadata.first,
-              let media = (track["Media"] as? [[String: Any]])?.first,
+              let track = metadata.first else {
+            print("[PlexWatch] fetchPartKey(\(ratingKey)): no Metadata in response, keys: \(json.keys)")
+            return nil
+        }
+        guard let media = (track["Media"] as? [[String: Any]])?.first,
               let part = (media["Part"] as? [[String: Any]])?.first,
-              let partKey = part["key"] as? String else { return nil }
+              let partKey = part["key"] as? String else {
+            let hasMedia = track["Media"] != nil
+            print("[PlexWatch] fetchPartKey(\(ratingKey)): hasMedia=\(hasMedia), track keys: \(Array(track.keys).prefix(10))")
+            return nil
+        }
+        print("[PlexWatch] fetchPartKey(\(ratingKey)): OK \(partKey)")
         return partKey
     }
 
     /// Enrich MusicItems that are missing partKey by fetching their full metadata
     func enrichWithPartKeys(_ items: [MusicItem]) async -> [MusicItem] {
+        print("[PlexWatch] enrichWithPartKeys: \(items.count) items, \(items.filter { $0.partKey != nil }.count) already have partKey")
         var result: [MusicItem] = []
         for item in items {
             if item.partKey != nil {
                 result.append(item)
-            } else if item.isTrack {
-                // Fetch full metadata to get partKey
+            } else {
+                // Fetch full metadata to get partKey (radio items may lack it)
+                print("[PlexWatch] Fetching partKey for \(item.ratingKey) '\(item.title)' type=\(item.type)")
                 if let partKey = await fetchPartKey(ratingKey: item.ratingKey) {
                     result.append(MusicItem(
                         ratingKey: item.ratingKey,

@@ -400,18 +400,35 @@ class WatchAudioPlayer: NSObject, ObservableObject {
         print("[WatchAudio] loadAndPlay: \(item.title)")
         print("[WatchAudio] URL: \(item.streamUrl.prefix(100))")
 
-        // Activate audio session just before playback (Apple recommends lazy activation)
+        // Set category synchronously, then activate asynchronously (watchOS requirement)
         do {
             let session = AVAudioSession.sharedInstance()
             try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
-            try session.setActive(true)
         } catch {
-            print("[WatchAudio] Audio session activation failed: \(error)")
-            self.error = "Audio session: \(error.localizedDescription)"
+            print("[WatchAudio] Audio session setCategory failed: \(error)")
+            self.error = "Audio category: \(error.localizedDescription)"
             isLoading = false
             return
         }
 
+        // watchOS requires async activation for longFormAudio
+        Task { @MainActor in
+            do {
+                try await AVAudioSession.sharedInstance().activate()
+                print("[WatchAudio] Audio session activated")
+            } catch {
+                print("[WatchAudio] Audio session activate() failed: \(error)")
+                self.error = "Audio activate: \(error.localizedDescription)"
+                self.isLoading = false
+                return
+            }
+            self.startPlayback(url: url, item: item)
+        }
+    }
+
+    /// Actually start AVPlayer playback (called after audio session is activated)
+    @MainActor
+    private func startPlayback(url: URL, item: QueueItem) {
         // Token is already in the URL query string — no custom headers needed
         let asset = AVURLAsset(url: url)
         playerItem = AVPlayerItem(asset: asset)
