@@ -7,24 +7,11 @@ struct SearchView: View {
     @State private var isSearching = false
     @State private var hasSearched = false
     @State private var errorMessage: String?
-    @FocusState private var isSearchFocused: Bool
+    @State private var showTextInput = false
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
         List {
-            // Search field always visible at top
-            Section {
-                TextField("Search", text: $searchText)
-                    .focused($isSearchFocused)
-                    .onSubmit { performSearch() }
-
-                if !searchText.isEmpty {
-                    Button(action: { performSearch() }) {
-                        Label("Search", systemImage: "magnifyingglass")
-                    }
-                }
-            }
-
             if let errorMessage {
                 Section {
                     Text(errorMessage)
@@ -46,6 +33,12 @@ struct SearchView: View {
                 Section {
                     Text("No results found")
                         .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+            } else if !hasSearched {
+                Section {
+                    Text("Tap to search by voice or scribble")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } else {
@@ -126,8 +119,18 @@ struct SearchView: View {
                 }
             }
         }
-        .navigationTitle("Search")
-        .onAppear { isSearchFocused = true }
+        .navigationTitle(searchText.isEmpty ? "Search" : searchText)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: { showTextInput = true }) {
+                    Image(systemName: "magnifyingglass")
+                }
+            }
+        }
+        .onAppear { showTextInput = true }
+        .sheet(isPresented: $showTextInput) {
+            TextInputView(text: $searchText, onSubmit: performSearch)
+        }
     }
 
     private func performSearch() {
@@ -154,7 +157,7 @@ struct SearchView: View {
                 WKInterfaceDevice.current().play(.failure)
                 return
             }
-            let queueItems = await result.toQueueItems(client: client)
+            let queueItems = result.toQueueItems(client: client)
             if queueItems.isEmpty {
                 await MainActor.run { errorMessage = "No playable tracks" }
                 WKInterfaceDevice.current().play(.failure)
@@ -173,5 +176,27 @@ struct SearchView: View {
             )
         }
     }
+}
 
+/// Native watchOS text input using dictation/scribble
+struct TextInputView: View {
+    @Binding var text: String
+    var onSubmit: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 12) {
+            TextField("Search", text: $text)
+                .onSubmit {
+                    dismiss()
+                    onSubmit()
+                }
+            Button("Search") {
+                dismiss()
+                onSubmit()
+            }
+            .disabled(text.trimmingCharacters(in: .whitespaces).isEmpty)
+        }
+        .padding()
+    }
 }

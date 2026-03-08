@@ -191,7 +191,7 @@ struct ArtistDetailView: View {
             }
 
             let client = PlexWatchClient.shared
-            let queueItems = await result.toQueueItems(client: client)
+            let queueItems = result.toQueueItems(client: client)
             print("[PlexWatch] Play all: \(result.items.count) items from API, \(queueItems.count) playable")
 
             if queueItems.isEmpty {
@@ -231,7 +231,7 @@ struct ArtistDetailView: View {
                 return
             }
 
-            let queueItems = await result.toQueueItems(client: client)
+            let queueItems = result.toQueueItems(client: client)
             print("[PlexWatch] Radio: \(result.items.count) items from API, \(queueItems.count) playable")
 
             if queueItems.isEmpty {
@@ -423,7 +423,7 @@ struct PlaylistDetailView: View {
         Task {
             if let result = await PlexWatchClient.shared.createPlaylistQueue(ratingKey: playlist.ratingKey, shuffle: shuffle) {
                 let client = PlexWatchClient.shared
-                let queueItems = await result.toQueueItems(client: client)
+                let queueItems = result.toQueueItems(client: client)
                 if !queueItems.isEmpty {
                     await MainActor.run {
                         connectivity.startLocalPlayback()
@@ -445,7 +445,7 @@ struct PlaylistDetailView: View {
         Task {
             if let result = await PlexWatchClient.shared.createPlaylistQueue(ratingKey: playlist.ratingKey) {
                 let client = PlexWatchClient.shared
-                let queueItems = await result.toQueueItems(client: client)
+                let queueItems = result.toQueueItems(client: client)
                 if !queueItems.isEmpty {
                     await MainActor.run {
                         connectivity.startLocalPlayback()
@@ -542,7 +542,7 @@ struct TrackListView: View {
             }
 
             let client = PlexWatchClient.shared
-            let queueItems = await result.toQueueItems(client: client)
+            let queueItems = result.toQueueItems(client: client)
             print("[PlexWatch] Album play: \(result.items.count) items, \(queueItems.count) playable")
 
             if queueItems.isEmpty {
@@ -581,7 +581,7 @@ struct TrackListView: View {
             }
 
             let client = PlexWatchClient.shared
-            let queueItems = await result.toQueueItems(client: client)
+            let queueItems = result.toQueueItems(client: client)
             if queueItems.isEmpty {
                 await MainActor.run { errorMessage = "No playable tracks"; isActioning = false }
                 WKInterfaceDevice.current().play(.failure)

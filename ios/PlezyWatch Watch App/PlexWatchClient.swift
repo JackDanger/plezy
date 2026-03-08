@@ -295,29 +295,21 @@ class PlexWatchClient {
         return await createPlayQueue(uri: uri)
     }
 
-    /// Build a stream URL for a track using its part key (direct file access)
-    func streamUrl(partKey: String) -> String? {
+    /// Build a stream URL for a track using Plex's universal transcoding endpoint.
+    /// Always transcodes to MP3 for watchOS AVPlayer compatibility (handles FLAC, etc.)
+    /// Only requires the ratingKey — no partKey needed.
+    func streamUrl(ratingKey: String) -> String? {
         guard let creds = credentials else { return nil }
-        return "\(creds.serverUrl)\(partKey)?X-Plex-Token=\(creds.token)"
-    }
-
-    /// Fetch the partKey for a track by loading its full metadata
-    /// Used when Media/Part data is not available (e.g. radio station responses)
-    func fetchPartKey(ratingKey: String) async -> String? {
-        guard let json = await get("/library/metadata/\(ratingKey)") else {
-            print("[PlexWatch] fetchPartKey(\(ratingKey)): request failed")
-            return nil
-        }
-        guard let container = json["MediaContainer"] as? [String: Any],
-              let metadata = container["Metadata"] as? [[String: Any]],
-              let track = metadata.first,
-              let media = (track["Media"] as? [[String: Any]])?.first,
-              let part = (media["Part"] as? [[String: Any]])?.first,
-              let partKey = part["key"] as? String else {
-            print("[PlexWatch] fetchPartKey(\(ratingKey)): no partKey in response")
-            return nil
-        }
-        return partKey
+        var components = URLComponents(string: "\(creds.serverUrl)/music/:/transcode/universal/start.mp3")
+        components?.queryItems = [
+            URLQueryItem(name: "path", value: "/library/metadata/\(ratingKey)"),
+            URLQueryItem(name: "mediaIndex", value: "0"),
+            URLQueryItem(name: "partIndex", value: "0"),
+            URLQueryItem(name: "protocol", value: "http"),
+            URLQueryItem(name: "X-Plex-Client-Identifier", value: clientIdentifier),
+            URLQueryItem(name: "X-Plex-Token", value: creds.token),
+        ]
+        return components?.url?.absoluteString
     }
 
     /// Build a thumbnail URL
@@ -433,30 +425,9 @@ struct MusicItem: Identifiable {
         return nil
     }
 
-    /// Convert to a QueueItem for playback (sync — requires partKey to already be present)
+    /// Convert to a QueueItem for playback using transcoding stream URL
     func toQueueItem(client: PlexWatchClient) -> QueueItem? {
-        guard let partKey, let streamUrl = client.streamUrl(partKey: partKey) else { return nil }
-        guard let token = client.credentials?.token else { return nil }
-        return QueueItem(from: [
-            "id": ratingKey,
-            "title": title,
-            "artist": artist as Any,
-            "albumArtUrl": client.thumbnailUrl(thumb) as Any,
-            "streamUrl": streamUrl,
-            "plexToken": token,
-            "duration": durationSeconds,
-        ])
-    }
-
-    /// Convert to a QueueItem, fetching partKey from server if missing
-    func toQueueItemAsync(client: PlexWatchClient) async -> QueueItem? {
-        // If we already have a partKey, use it directly
-        if let result = toQueueItem(client: client) {
-            return result
-        }
-        // Fetch full metadata to get the partKey
-        guard let fetchedPartKey = await client.fetchPartKey(ratingKey: ratingKey) else { return nil }
-        guard let streamUrl = client.streamUrl(partKey: fetchedPartKey) else { return nil }
+        guard let streamUrl = client.streamUrl(ratingKey: ratingKey) else { return nil }
         guard let token = client.credentials?.token else { return nil }
         return QueueItem(from: [
             "id": ratingKey,
@@ -474,15 +445,9 @@ struct PlayQueueResult {
     let playQueueId: Int
     let items: [MusicItem]
 
-    /// Convert all items to QueueItems, fetching partKeys as needed
-    func toQueueItems(client: PlexWatchClient) async -> [QueueItem] {
-        var queueItems: [QueueItem] = []
-        for item in items {
-            if let qi = await item.toQueueItemAsync(client: client) {
-                queueItems.append(qi)
-            }
-        }
-        return queueItems
+    /// Convert all items to QueueItems
+    func toQueueItems(client: PlexWatchClient) -> [QueueItem] {
+        items.compactMap { $0.toQueueItem(client: client) }
     }
 
     /// Build a PlayQueueReference from this result for queue refreshing

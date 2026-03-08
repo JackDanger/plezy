@@ -89,6 +89,10 @@ struct IdleView: View {
             NavigationLink(destination: SearchView()) {
                 Label("Search", systemImage: "magnifyingglass")
             }
+            NavigationLink(destination: DebugView()) {
+                Label("Debug", systemImage: "ant")
+                    .font(.caption2)
+            }
             Text("Build: \(BuildInfo.stamp)")
                 .font(.system(size: 9))
                 .foregroundStyle(.tertiary)
@@ -213,7 +217,7 @@ struct IdleView: View {
                 return
             }
 
-            let queueItems = await result.toQueueItems(client: client)
+            let queueItems = result.toQueueItems(client: client)
             if !queueItems.isEmpty {
                 // For radio stations, store the queue ref so we can fetch more tracks
                 let queueRef = (item.type == .station) ? result.toQueueReference(client: client) : nil
