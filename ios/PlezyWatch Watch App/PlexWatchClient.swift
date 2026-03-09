@@ -132,7 +132,9 @@ class PlexWatchClient {
                 album: nil,
                 thumb: thumb,
                 duration: duration,
-                partKey: nil
+                partKey: nil,
+                parentRatingKey: nil,
+                grandparentRatingKey: nil
             )
         }
     }
@@ -324,33 +326,46 @@ class PlexWatchClient {
         return partKey
     }
 
-    /// Enrich MusicItems that are missing partKey by fetching their full metadata
+    /// Enrich MusicItems that are missing partKey by fetching their full metadata (in parallel)
     func enrichWithPartKeys(_ items: [MusicItem]) async -> [MusicItem] {
-        print("[PlexWatch] enrichWithPartKeys: \(items.count) items, \(items.filter { $0.partKey != nil }.count) already have partKey")
-        var result: [MusicItem] = []
-        for item in items {
-            if item.partKey != nil {
-                result.append(item)
-            } else {
-                // Fetch full metadata to get partKey (radio items may lack it)
-                print("[PlexWatch] Fetching partKey for \(item.ratingKey) '\(item.title)' type=\(item.type)")
-                if let partKey = await fetchPartKey(ratingKey: item.ratingKey) {
-                    result.append(MusicItem(
-                        ratingKey: item.ratingKey,
-                        title: item.title,
-                        type: item.type,
-                        artist: item.artist,
-                        album: item.album,
-                        thumb: item.thumb,
-                        duration: item.duration,
-                        partKey: partKey
-                    ))
-                } else {
-                    print("[PlexWatch] Could not fetch partKey for \(item.ratingKey) '\(item.title)'")
+        let needEnrichment = items.filter { $0.partKey == nil }
+        print("[PlexWatch] enrichWithPartKeys: \(items.count) items, \(items.count - needEnrichment.count) already have partKey, \(needEnrichment.count) need fetch")
+
+        guard !needEnrichment.isEmpty else { return items }
+
+        // Fetch all missing partKeys in parallel
+        let fetched = await withTaskGroup(of: (String, String?).self, returning: [String: String].self) { group in
+            for item in needEnrichment {
+                group.addTask {
+                    let partKey = await self.fetchPartKey(ratingKey: item.ratingKey)
+                    return (item.ratingKey, partKey)
                 }
             }
+            var results: [String: String] = [:]
+            for await (ratingKey, partKey) in group {
+                if let partKey { results[ratingKey] = partKey }
+            }
+            return results
         }
-        return result
+
+        print("[PlexWatch] enrichWithPartKeys: fetched \(fetched.count)/\(needEnrichment.count) partKeys")
+
+        return items.compactMap { item in
+            if item.partKey != nil { return item }
+            guard let partKey = fetched[item.ratingKey] else { return nil }
+            return MusicItem(
+                ratingKey: item.ratingKey,
+                title: item.title,
+                type: item.type,
+                artist: item.artist,
+                album: item.album,
+                thumb: item.thumb,
+                duration: item.duration,
+                partKey: partKey,
+                parentRatingKey: item.parentRatingKey,
+                grandparentRatingKey: item.grandparentRatingKey
+            )
+        }
     }
 
     /// Build a thumbnail URL
@@ -412,8 +427,16 @@ class PlexWatchClient {
     }
 
     private func parseMusicItem(_ dict: [String: Any]) -> MusicItem? {
-        guard let ratingKey = dict["ratingKey"] as? String,
-              let title = dict["title"] as? String else { return nil }
+        // ratingKey can be String or Int depending on the Plex API endpoint
+        let ratingKey: String
+        if let s = dict["ratingKey"] as? String {
+            ratingKey = s
+        } else if let n = dict["ratingKey"] as? Int {
+            ratingKey = String(n)
+        } else {
+            return nil
+        }
+        guard let title = dict["title"] as? String else { return nil }
 
         let type = dict["type"] as? String ?? "track"
 
@@ -424,6 +447,17 @@ class PlexWatchClient {
             partKey = part["key"] as? String
         }
 
+        // parentRatingKey / grandparentRatingKey can also be Int
+        let parentRK: String?
+        if let s = dict["parentRatingKey"] as? String { parentRK = s }
+        else if let n = dict["parentRatingKey"] as? Int { parentRK = String(n) }
+        else { parentRK = nil }
+
+        let grandparentRK: String?
+        if let s = dict["grandparentRatingKey"] as? String { grandparentRK = s }
+        else if let n = dict["grandparentRatingKey"] as? Int { grandparentRK = String(n) }
+        else { grandparentRK = nil }
+
         return MusicItem(
             ratingKey: ratingKey,
             title: title,
@@ -432,7 +466,9 @@ class PlexWatchClient {
             album: dict["parentTitle"] as? String,
             thumb: dict["thumb"] as? String ?? dict["parentThumb"] as? String,
             duration: dict["duration"] as? Double,
-            partKey: partKey
+            partKey: partKey,
+            parentRatingKey: parentRK,
+            grandparentRatingKey: grandparentRK
         )
     }
 }
@@ -455,6 +491,8 @@ struct MusicItem: Identifiable {
     let thumb: String?
     let duration: Double?  // milliseconds
     let partKey: String?
+    let parentRatingKey: String?
+    let grandparentRatingKey: String?
 
     var id: String { ratingKey }
 
@@ -479,10 +517,13 @@ struct MusicItem: Identifiable {
             "id": ratingKey,
             "title": title,
             "artist": artist as Any,
+            "album": album as Any,
             "albumArtUrl": client.thumbnailUrl(thumb) as Any,
             "streamUrl": streamUrl,
             "plexToken": token,
             "duration": durationSeconds,
+            "parentRatingKey": parentRatingKey as Any,
+            "grandparentRatingKey": grandparentRatingKey as Any,
         ])
     }
 }

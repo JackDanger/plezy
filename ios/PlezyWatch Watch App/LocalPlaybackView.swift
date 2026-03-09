@@ -2,7 +2,7 @@ import SwiftUI
 import WatchKit
 
 struct LocalPlaybackView: View {
-    @StateObject private var audioPlayer = WatchAudioPlayer.shared
+    @ObservedObject private var audioPlayer = WatchAudioPlayer.shared
     @EnvironmentObject var connectivity: WatchConnectivityManager
     @State private var selectedPage: Int = 0
     @State private var dragOffset: CGFloat = 0
@@ -20,9 +20,13 @@ struct LocalPlaybackView: View {
             QueueControlsPage()
                 .tag(1)
 
-            // Page 2: Up Next
-            UpNextPage()
+            // Page 2: Track Actions (Go to Artist, Album, Track Radio)
+            TrackActionsPage()
                 .tag(2)
+
+            // Page 3: Up Next
+            UpNextPage()
+                .tag(3)
         }
         .tabViewStyle(.page(indexDisplayMode: .automatic))
         .offset(y: dragOffset)
@@ -56,7 +60,7 @@ struct LocalPlaybackView: View {
 
 // MARK: - Main Playback Page
 struct MainPlaybackPage: View {
-    @StateObject private var audioPlayer = WatchAudioPlayer.shared
+    @ObservedObject private var audioPlayer = WatchAudioPlayer.shared
     @EnvironmentObject var connectivity: WatchConnectivityManager
     @Binding var dragOffset: CGFloat
     var onDismiss: () -> Void
@@ -189,7 +193,7 @@ struct MainPlaybackPage: View {
 
 // MARK: - Queue Controls Page
 struct QueueControlsPage: View {
-    @StateObject private var audioPlayer = WatchAudioPlayer.shared
+    @ObservedObject private var audioPlayer = WatchAudioPlayer.shared
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
@@ -291,7 +295,7 @@ struct QueueControlsPage: View {
 
 // MARK: - Up Next Page
 struct UpNextPage: View {
-    @StateObject private var audioPlayer = WatchAudioPlayer.shared
+    @ObservedObject private var audioPlayer = WatchAudioPlayer.shared
 
     var body: some View {
         VStack(spacing: 6) {
@@ -350,6 +354,151 @@ struct UpNextPage: View {
     }
 }
 
+// MARK: - Track Actions Page
+struct TrackActionsPage: View {
+    @ObservedObject private var audioPlayer = WatchAudioPlayer.shared
+    @EnvironmentObject var connectivity: WatchConnectivityManager
+    @State private var isActioning = false
+
+    var body: some View {
+        VStack(spacing: 10) {
+            if let item = audioPlayer.currentItem {
+                // Track info header
+                VStack(spacing: 2) {
+                    Text(item.title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                    if let artist = item.artist {
+                        Text(artist)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.top, 4)
+
+                Divider().padding(.horizontal, 16)
+
+                ScrollView {
+                    VStack(spacing: 8) {
+                        // Go to Artist
+                        if let artistKey = item.grandparentRatingKey, let artistName = item.artist {
+                            NavigationLink(destination: ArtistDetailView(artist: MusicItem(
+                                ratingKey: artistKey,
+                                title: artistName,
+                                type: "artist",
+                                artist: nil,
+                                album: nil,
+                                thumb: nil,
+                                duration: nil,
+                                partKey: nil,
+                                parentRatingKey: nil,
+                                grandparentRatingKey: nil
+                            ))) {
+                                HStack {
+                                    Image(systemName: "music.mic")
+                                        .font(.system(size: 16))
+                                        .frame(width: 24)
+                                    Text("Go to Artist")
+                                        .font(.system(size: 14))
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(10)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        // Go to Album
+                        if let albumKey = item.parentRatingKey, let albumName = item.album {
+                            NavigationLink(destination: TrackListView(albumKey: albumKey, albumTitle: albumName)) {
+                                HStack {
+                                    Image(systemName: "square.stack")
+                                        .font(.system(size: 16))
+                                        .frame(width: 24)
+                                    Text("Go to Album")
+                                        .font(.system(size: 14))
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(10)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        // Track Radio
+                        Button(action: { startTrackRadio(item) }) {
+                            HStack {
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                                    .font(.system(size: 16))
+                                    .frame(width: 24)
+                                Text("Track Radio")
+                                    .font(.system(size: 14))
+                                Spacer()
+                                if isActioning {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(Color.blue.opacity(0.2))
+                            .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(isActioning)
+                    }
+                    .padding(.horizontal, 4)
+                }
+            } else {
+                Spacer()
+                Text("No track playing")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+    }
+
+    private func startTrackRadio(_ item: QueueItem) {
+        WKInterfaceDevice.current().play(.click)
+        isActioning = true
+        Task {
+            let client = PlexWatchClient.shared
+            let (radioResult, _) = await client.createRadioStation(ratingKey: item.id)
+            guard let result = radioResult else {
+                WKInterfaceDevice.current().play(.failure)
+                await MainActor.run { isActioning = false }
+                return
+            }
+            let queueItems = await result.toQueueItems(client: client)
+            if !queueItems.isEmpty {
+                let queueRef = result.toQueueReference(client: client)
+                await MainActor.run {
+                    WatchAudioPlayer.shared.loadQueue(queueItems, queueRef: queueRef)
+                    isActioning = false
+                }
+            } else {
+                WKInterfaceDevice.current().play(.failure)
+                await MainActor.run { isActioning = false }
+            }
+        }
+    }
+}
+
 struct LocalAlbumArtView: View {
     let url: String?
     let token: String?
@@ -380,7 +529,7 @@ struct LocalAlbumArtView: View {
         .onAppear {
             loadImage()
         }
-        .onChange(of: url) { _ in
+        .onChange(of: url) { _, _ in
             image = nil
             loadImage()
         }

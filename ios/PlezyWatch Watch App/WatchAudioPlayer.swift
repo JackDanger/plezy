@@ -187,7 +187,10 @@ class WatchAudioPlayer: NSObject, ObservableObject {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
 
-    @objc private func playerItemDidFinish() {
+    @objc private func playerItemDidFinish(_ notification: Notification) {
+        // Only handle if it's the current player item (not a discarded one)
+        guard let finishedItem = notification.object as? AVPlayerItem,
+              finishedItem === playerItem else { return }
         switch repeatMode {
         case .one:
             // Repeat current track
@@ -431,36 +434,22 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     private func startPlayback(url: URL, item: QueueItem) {
         // Token is already in the URL query string — no custom headers needed
         let asset = AVURLAsset(url: url)
-        playerItem = AVPlayerItem(asset: asset)
+        let newItem = AVPlayerItem(asset: asset)
+        playerItem = newItem
 
         // Clear old subscriptions before adding new ones
         cancellables.removeAll()
 
         // Observe player item status
-        playerItem?.publisher(for: \.status)
+        newItem.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
-                switch status {
-                case .readyToPlay:
-                    print("[WatchAudio] Ready to play")
-                    self?.isLoading = false
-                    self?.duration = self?.playerItem?.duration.seconds ?? 0
-                    self?.player?.play()
-                    self?.isPlaying = true
-                    self?.updateNowPlayingInfo()
-                case .failed:
-                    let err = self?.playerItem?.error?.localizedDescription ?? "Playback failed"
-                    print("[WatchAudio] Player item FAILED: \(err)")
-                    self?.error = err
-                    self?.isLoading = false
-                default:
-                    break
-                }
+                self?.handlePlayerItemStatus(status)
             }
             .store(in: &cancellables)
 
         // Observe playback stalls and recover
-        NotificationCenter.default.publisher(for: .AVPlayerItemPlaybackStalled, object: playerItem)
+        NotificationCenter.default.publisher(for: .AVPlayerItemPlaybackStalled, object: newItem)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 print("[WatchAudio] Playback stalled — attempting recovery")
@@ -472,13 +461,40 @@ class WatchAudioPlayer: NSObject, ObservableObject {
             .store(in: &cancellables)
 
         if player == nil {
-            player = AVPlayer(playerItem: playerItem)
+            player = AVPlayer(playerItem: newItem)
         } else {
-            player?.replaceCurrentItem(with: playerItem)
+            player?.replaceCurrentItem(with: newItem)
         }
 
         setupTimeObserver()
         updateNowPlayingInfo()
+
+        // Check status immediately in case it's already ready (race condition fix)
+        if newItem.status == .readyToPlay {
+            handlePlayerItemStatus(.readyToPlay)
+        } else if newItem.status == .failed {
+            handlePlayerItemStatus(.failed)
+        }
+    }
+
+    private func handlePlayerItemStatus(_ status: AVPlayerItem.Status) {
+        switch status {
+        case .readyToPlay:
+            guard isLoading else { return } // avoid double-handling
+            print("[WatchAudio] Ready to play")
+            isLoading = false
+            duration = playerItem?.duration.seconds ?? 0
+            player?.play()
+            isPlaying = true
+            updateNowPlayingInfo()
+        case .failed:
+            let err = playerItem?.error?.localizedDescription ?? "Playback failed"
+            print("[WatchAudio] Player item FAILED: \(err)")
+            error = err
+            isLoading = false
+        default:
+            break
+        }
     }
 
     private func setupTimeObserver() {
@@ -670,10 +686,15 @@ struct QueueItem: Identifiable, Codable {
     let id: String
     let title: String
     let artist: String?
+    let album: String?
     let albumArtUrl: String?
     let streamUrl: String
     let plexToken: String
     let duration: Double
+    /// Parent album ratingKey (for "Go to Album")
+    let parentRatingKey: String?
+    /// Grandparent artist ratingKey (for "Go to Artist")
+    let grandparentRatingKey: String?
 
     init?(from dict: [String: Any]) {
         guard let streamUrl = dict["streamUrl"] as? String, !streamUrl.isEmpty else {
@@ -687,10 +708,13 @@ struct QueueItem: Identifiable, Codable {
         self.id = dict["id"] as? String ?? UUID().uuidString
         self.title = dict["title"] as? String ?? "Unknown"
         self.artist = dict["artist"] as? String
+        self.album = dict["album"] as? String
         self.albumArtUrl = dict["albumArtUrl"] as? String
         self.streamUrl = streamUrl
         self.plexToken = plexToken
         self.duration = dict["duration"] as? Double ?? 0
+        self.parentRatingKey = dict["parentRatingKey"] as? String
+        self.grandparentRatingKey = dict["grandparentRatingKey"] as? String
     }
 }
 

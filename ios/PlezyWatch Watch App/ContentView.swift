@@ -10,7 +10,7 @@ enum AppMode {
 
 struct ContentView: View {
     @EnvironmentObject var connectivity: WatchConnectivityManager
-    @StateObject private var audioPlayer = WatchAudioPlayer.shared
+    @ObservedObject private var audioPlayer = WatchAudioPlayer.shared
 
     var body: some View {
         Group {

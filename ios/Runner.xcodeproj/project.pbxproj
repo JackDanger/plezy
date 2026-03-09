@@ -44,6 +44,12 @@
 		DD4E5F6A7B8C9D0E1F203142 /* plezy.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6A48DFAF2EA70C7100C1F7CD /* plezy.icon */; };
 		EE5F6A7B8C9D0E1F20314253 /* PlezyComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5F6A7B8C9D0E1F20314254 /* PlezyComplication.swift */; };
 		FF6A7B8C9D0E1F2031425301 /* BuildInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6A7B8C9D0E1F2031425302 /* BuildInfo.swift */; };
+		A1B2C3D4E5F6A7B800000001 /* SearchableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000002 /* SearchableView.swift */; };
+		WE00000000000006 /* PlezyWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WE00000000000002 /* PlezyWidgetBundle.swift */; };
+		WE00000000000007 /* PlezyComplicationExt.swift in Sources */ = {isa = PBXBuildFile; fileRef = WE00000000000003 /* PlezyComplicationExt.swift */; };
+		WE00000000000008 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6A7B800112234 /* WidgetKit.framework */; };
+		WE00000000000009 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F6A7B800112236 /* SwiftUI.framework */; };
+		WE0000000000000A /* PlezyWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = WE00000000000001 /* PlezyWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +66,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 4FDA9A2C2360E9C017D58053;
 			remoteInfo = "PlezyWatch Watch App";
+		};
+		WE00000000000010 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 97C146E61CF9000F007C117D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = WE0000000000000F;
+			remoteInfo = PlezyWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -83,6 +96,17 @@
 				F4FDDCE9A56A10B520859C99 /* PlezyWatch Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WE0000000000000E /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				WE0000000000000A /* PlezyWidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -138,6 +162,11 @@
 		CC3D4E5F6A7B8C9D0E1F2032 /* WatchImageCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchImageCache.swift; sourceTree = "<group>"; };
 		EE5F6A7B8C9D0E1F20314254 /* PlezyComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlezyComplication.swift; sourceTree = "<group>"; };
 		FF6A7B8C9D0E1F2031425302 /* BuildInfo.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B800000002 /* SearchableView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SearchableView.swift; sourceTree = "<group>"; };
+		WE00000000000001 /* PlezyWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PlezyWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		WE00000000000002 /* PlezyWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlezyWidgetBundle.swift; sourceTree = "<group>"; };
+		WE00000000000003 /* PlezyComplicationExt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlezyComplicationExt.swift; sourceTree = "<group>"; };
+		WE00000000000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,6 +214,7 @@
 				3B762A52AD1CF55FE1D03A9D /* Assets.xcassets */,
 				C19EBD77ED1AC18146C9A6C3 /* LibraryBrowserView.swift */,
 				DFBBEE957E9B0CE9708526C1 /* SearchView.swift */,
+				A1B2C3D4E5F6A7B800000002 /* SearchableView.swift */,
 				DB6A1F0E2B3C4D5E6F7A8B9D /* DebugView.swift */,
 				EB57BADBEB3AE8725FA0DD44 /* PlexWatchClient.swift */,
 				AA1B2C3D4E5F6A7B8C9D0E10 /* RecentlyPlayedManager.swift */,
@@ -194,6 +224,16 @@
 				FF6A7B8C9D0E1F2031425302 /* BuildInfo.swift */,
 			);
 			path = "PlezyWatch Watch App";
+			sourceTree = "<group>";
+		};
+		WE00000000000005 /* PlezyWidgetExtension */ = {
+			isa = PBXGroup;
+			children = (
+				WE00000000000002 /* PlezyWidgetBundle.swift */,
+				WE00000000000003 /* PlezyComplicationExt.swift */,
+				WE00000000000004 /* Info.plist */,
+			);
+			path = PlezyWidgetExtension;
 			sourceTree = "<group>";
 		};
 		331C8082294A63A400263BE5 /* RunnerTests */ = {
@@ -270,6 +310,7 @@
 				67716449E04A72AA71A90156 /* Frameworks */,
 				6A48DFAF2EA70C7100C1F7CD /* plezy.icon */,
 				32F72A6CC2D01612C1B21431 /* PlezyWatch Watch App */,
+				WE00000000000005 /* PlezyWidgetExtension */,
 			);
 			sourceTree = "<group>";
 		};
@@ -279,6 +320,7 @@
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 				A21E7FAB4F5B6BA046E7B4B9 /* PlezyWatch Watch App.app */,
+				WE00000000000001 /* PlezyWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -328,10 +370,12 @@
 				2CFDB4E1796043F9E2DB5466 /* Sources */,
 				BB918536E7D6208BB90832F5 /* Frameworks */,
 				3BB930B56FD90043532B9E6D /* Resources */,
+				WE0000000000000E /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				WE00000000000011 /* PBXTargetDependency */,
 			);
 			name = "PlezyWatch Watch App";
 			productName = "PlezyWatch Watch App";
@@ -363,6 +407,23 @@
 			productReference = 97C146EE1CF9000F007C117D /* Runner.app */;
 			productType = "com.apple.product-type.application";
 		};
+		WE0000000000000F /* PlezyWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = WE00000000000012 /* Build configuration list for PBXNativeTarget "PlezyWidgetExtension" */;
+			buildPhases = (
+				WE0000000000000B /* Sources */,
+				WE0000000000000C /* Frameworks */,
+				WE0000000000000D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PlezyWidgetExtension;
+			productName = PlezyWidgetExtension;
+			productReference = WE00000000000001 /* PlezyWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -380,6 +441,9 @@
 					97C146ED1CF9000F007C117D = {
 						CreatedOnToolsVersion = 7.3.1;
 						LastSwiftMigration = 1100;
+					};
+					WE0000000000000F = {
+						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
@@ -402,6 +466,7 @@
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 				4FDA9A2C2360E9C017D58053 /* PlezyWatch Watch App */,
+				WE0000000000000F /* PlezyWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -548,6 +613,31 @@
 		};
 /* End PBXShellScriptBuildPhase section */
 
+		WE0000000000000B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WE00000000000006 /* PlezyWidgetBundle.swift in Sources */,
+				WE00000000000007 /* PlezyComplicationExt.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WE0000000000000C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WE00000000000008 /* WidgetKit.framework in Frameworks */,
+				WE00000000000009 /* SwiftUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WE0000000000000D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* Begin PBXSourcesBuildPhase section */
 		2CFDB4E1796043F9E2DB5466 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -562,12 +652,12 @@
 				31832BA0B678D4BCD2864D4C /* WatchConnectivityManager.swift in Sources */,
 				8A0900D328663BDA55C82669 /* LibraryBrowserView.swift in Sources */,
 				47C6C673E35F2CEFD49C9E1F /* SearchView.swift in Sources */,
+				A1B2C3D4E5F6A7B800000001 /* SearchableView.swift in Sources */,
 				DB6A1F0E2B3C4D5E6F7A8B9C /* DebugView.swift in Sources */,
 				C5BFFB124C476F96369A47DB /* PlexWatchClient.swift in Sources */,
 				AA1B2C3D4E5F6A7B8C9D0E1F /* RecentlyPlayedManager.swift in Sources */,
 				BB2C3D4E5F6A7B8C9D0E1F20 /* SetupView.swift in Sources */,
 				CC3D4E5F6A7B8C9D0E1F2031 /* WatchImageCache.swift in Sources */,
-				EE5F6A7B8C9D0E1F20314253 /* PlezyComplication.swift in Sources */,
 				FF6A7B8C9D0E1F2031425301 /* BuildInfo.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -607,6 +697,12 @@
 			isa = PBXTargetDependency;
 			target = 97C146ED1CF9000F007C117D /* Runner */;
 			targetProxy = 331C8085294A63A400263BE5 /* PBXContainerItemProxy */;
+		};
+		WE00000000000011 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = PlezyWidgetExtension;
+			target = WE0000000000000F /* PlezyWidgetExtension */;
+			targetProxy = WE00000000000010 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1004,6 +1100,100 @@
 			};
 			name = Profile;
 		};
+		WE00000000000013 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = LWLMGDKSM9;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PlezyWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Plezy;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jackdanger.plezy.watchkitapp.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		WE00000000000014 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = LWLMGDKSM9;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PlezyWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Plezy;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jackdanger.plezy.watchkitapp.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		WE00000000000015 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = LWLMGDKSM9;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = PlezyWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Plezy;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jackdanger.plezy.watchkitapp.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1043,6 +1233,16 @@
 				1302C547126B511A9868275A /* Release */,
 				9A437C212E639594D6A8B93C /* Debug */,
 				E49D73ECC73D4BC616E4D6F4 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		WE00000000000012 /* Build configuration list for PBXNativeTarget "PlezyWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				WE00000000000013 /* Debug */,
+				WE00000000000014 /* Release */,
+				WE00000000000015 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
