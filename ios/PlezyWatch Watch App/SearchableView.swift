@@ -1,15 +1,31 @@
 import SwiftUI
 import WatchKit
 
-/// A view that presents the native watchOS search interface via .searchable()
+/// Immediately presents the system text input (dictation/scribble) on appear,
+/// then shows search results inline.
 struct SearchableView: View {
     @State private var searchText = ""
+    @State private var committedQuery = ""
     @State private var results: [MusicItem] = []
     @State private var isSearching = false
+    @State private var hasAppeared = false
+    @FocusState private var isInputFocused: Bool
     @EnvironmentObject var connectivity: WatchConnectivityManager
 
     var body: some View {
         List {
+            // Search input field — auto-focuses to trigger system dictation
+            Section {
+                TextField("Search music…", text: $searchText)
+                    .focused($isInputFocused)
+                    .onSubmit {
+                        let trimmed = searchText.trimmingCharacters(in: .whitespaces)
+                        guard !trimmed.isEmpty else { return }
+                        committedQuery = trimmed
+                        performSearch(trimmed)
+                    }
+            }
+
             if isSearching {
                 HStack {
                     Spacer()
@@ -17,8 +33,8 @@ struct SearchableView: View {
                     Spacer()
                 }
                 .listRowBackground(Color.clear)
-            } else if !searchText.isEmpty && results.isEmpty {
-                Text("No results found")
+            } else if !committedQuery.isEmpty && results.isEmpty {
+                Text("No results for \"\(committedQuery)\"")
                     .font(.body)
                     .foregroundStyle(.secondary)
             } else if !results.isEmpty {
@@ -100,14 +116,14 @@ struct SearchableView: View {
             }
         }
         .navigationTitle("Search")
-        .searchable(text: $searchText)
-        .onChange(of: searchText) { _, newValue in
-            let trimmed = newValue.trimmingCharacters(in: .whitespaces)
-            guard !trimmed.isEmpty else {
-                results = []
-                return
+        .onAppear {
+            if !hasAppeared {
+                hasAppeared = true
+                // Small delay lets the view finish layout before presenting input
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isInputFocused = true
+                }
             }
-            performSearch(trimmed)
         }
     }
 
