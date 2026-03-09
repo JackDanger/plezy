@@ -326,26 +326,21 @@ class PlexWatchClient {
         return partKey
     }
 
-    /// Enrich MusicItems that are missing partKey by fetching their full metadata (in parallel)
+    /// Enrich MusicItems that are missing partKey by fetching their full metadata
     func enrichWithPartKeys(_ items: [MusicItem]) async -> [MusicItem] {
         let needEnrichment = items.filter { $0.partKey == nil }
         print("[PlexWatch] enrichWithPartKeys: \(items.count) items, \(items.count - needEnrichment.count) already have partKey, \(needEnrichment.count) need fetch")
 
         guard !needEnrichment.isEmpty else { return items }
 
-        // Fetch all missing partKeys in parallel
-        let fetched = await withTaskGroup(of: (String, String?).self, returning: [String: String].self) { group in
-            for item in needEnrichment {
-                group.addTask {
-                    let partKey = await self.fetchPartKey(ratingKey: item.ratingKey)
-                    return (item.ratingKey, partKey)
-                }
+        // Fetch missing partKeys sequentially to avoid overwhelming the Watch network stack
+        var fetched: [String: String] = [:]
+        for item in needEnrichment {
+            if let partKey = await fetchPartKey(ratingKey: item.ratingKey) {
+                fetched[item.ratingKey] = partKey
+            } else {
+                print("[PlexWatch] enrichWithPartKeys: FAILED for \(item.ratingKey) '\(item.title)'")
             }
-            var results: [String: String] = [:]
-            for await (ratingKey, partKey) in group {
-                if let partKey { results[ratingKey] = partKey }
-            }
-            return results
         }
 
         print("[PlexWatch] enrichWithPartKeys: fetched \(fetched.count)/\(needEnrichment.count) partKeys")

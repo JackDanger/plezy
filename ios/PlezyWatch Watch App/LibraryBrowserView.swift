@@ -231,11 +231,15 @@ struct ArtistDetailView: View {
                 return
             }
 
+            let apiCount = result.items.count
+            let withPartKey = result.items.filter { $0.partKey != nil }.count
             let queueItems = await result.toQueueItems(client: client)
-            print("[PlexWatch] Radio: \(result.items.count) items from API, \(queueItems.count) playable")
+            let detail = "api:\(apiCount) pk:\(withPartKey) playable:\(queueItems.count)"
+            print("[PlexWatch] Radio: \(detail)")
 
             if queueItems.isEmpty {
-                await MainActor.run { errorMessage = "No playable tracks"; isActioning = false }
+                let sample = result.items.prefix(2).map { "\($0.ratingKey):\($0.type)" }.joined(separator: ",")
+                await MainActor.run { errorMessage = "No playable tracks (\(detail) [\(sample)])"; isActioning = false }
                 WKInterfaceDevice.current().play(.failure)
                 return
             }

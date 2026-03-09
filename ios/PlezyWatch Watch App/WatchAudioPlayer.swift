@@ -488,9 +488,14 @@ class WatchAudioPlayer: NSObject, ObservableObject {
             isPlaying = true
             updateNowPlayingInfo()
         case .failed:
-            let err = playerItem?.error?.localizedDescription ?? "Playback failed"
-            print("[WatchAudio] Player item FAILED: \(err)")
-            error = err
+            let underlyingError = playerItem?.error as NSError?
+            let domain = underlyingError?.domain ?? "?"
+            let code = underlyingError?.code ?? 0
+            let desc = underlyingError?.localizedDescription ?? "Playback failed"
+            let urlPrefix = currentItem?.streamUrl.prefix(60) ?? "?"
+            let fullErr = "\(desc) [\(domain) \(code)] url:\(urlPrefix)"
+            print("[WatchAudio] Player item FAILED: \(fullErr)")
+            error = fullErr
             isLoading = false
         default:
             break
