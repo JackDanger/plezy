@@ -3,9 +3,9 @@ import os
 import SwiftUI
 
 /// Structured, timestamped instrumentation for Plezy Watch.
-/// Stream with: log stream --predicate 'subsystem == "com.edde746.plezy.watch"' --style compact
+/// Stream with: log stream --predicate 'subsystem == "com.jackdanger.plezy.watch"' --style compact
 enum WatchInstrument {
-  static let subsystem = "com.edde746.plezy.watch"
+  static let subsystem = "com.jackdanger.plezy.watch"
   private static let bootTime = CFAbsoluteTimeGetCurrent()
   private static let maxEntries = 600
   private static let tokenInUrl = try! NSRegularExpression(

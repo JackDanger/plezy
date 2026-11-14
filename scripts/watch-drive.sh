@@ -20,15 +20,15 @@ xcrun simctl boot "$WATCH_UDID" 2>/dev/null || true
 
 echo "==> Starting log stream → $LOG"
 rm -f "$LOG"
-/usr/bin/log stream --predicate 'subsystem == "com.edde746.plezy.watch"' --style compact > "$LOG" 2>&1 &
+/usr/bin/log stream --predicate 'subsystem == "com.jackdanger.plezy.watch"' --style compact > "$LOG" 2>&1 &
 LOGPID=$!
 trap 'kill $LOGPID 2>/dev/null || true' EXIT
 sleep 1
 
 echo "==> Installing & launching with PLEZY_INSTRUMENT_DRIVE=1"
-xcrun simctl terminate "$WATCH_UDID" com.edde746.plezy.watchkitapp 2>/dev/null || true
+xcrun simctl terminate "$WATCH_UDID" com.jackdanger.plezy.watchkitapp 2>/dev/null || true
 xcrun simctl install "$WATCH_UDID" "$APP"
-SIMCTL_CHILD_PLEZY_INSTRUMENT_DRIVE=1 xcrun simctl launch "$WATCH_UDID" com.edde746.plezy.watchkitapp
+SIMCTL_CHILD_PLEZY_INSTRUMENT_DRIVE=1 xcrun simctl launch "$WATCH_UDID" com.jackdanger.plezy.watchkitapp
 
 echo "==> Driving (12s)…"
 sleep 1.5

@@ -386,6 +386,18 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
+        // The Music Assistant fork numbered its own two migrations 21 and 22
+        // before upstream used those numbers. A fork database at either
+        // version has neither of upstream's steps, and the chain below would
+        // skip both, so they run here, and the fork's tables go: the fork
+        // keeps no Music Assistant library data any more.
+        if ((from == 21 || from == 22) && await _hasTable('music_pairings')) {
+          appLogger.i('Bringing a Music Assistant fork database (v$from) onto upstream v21 and v22');
+          await m.alterTable(TableMigration(connections));
+          await _ignoreAlreadyExists('MusicSessions table', () => m.createTable(musicSessions));
+          await customStatement('DROP TABLE IF EXISTS music_track_resolutions');
+          await customStatement('DROP TABLE IF EXISTS music_pairings');
+        }
         if (from < 7) {
           appLogger.i('Adding OfflineWatchProgress table (v7 migration)');
           await _ignoreAlreadyExists('OfflineWatchProgress table', () => m.createTable(offlineWatchProgress));
@@ -767,6 +779,14 @@ class AppDatabase extends _$AppDatabase {
         }
       },
     );
+  }
+
+  Future<bool> _hasTable(String name) async {
+    final rows = await customSelect(
+      "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable.withString(name)],
+    ).get();
+    return rows.isNotEmpty;
   }
 
   Future<void> _ignoreAlreadyExists(String label, Future<void> Function() operation) async {

@@ -14,11 +14,11 @@
 set -euo pipefail
 
 TARGET="${1:-simulator}"
-PREDICATE='subsystem == "com.edde746.plezy.watch"'
+PREDICATE='subsystem == "com.jackdanger.plezy.watch"'
 
 if [[ "$TARGET" == "device" ]]; then
   echo "Streaming from unified log (physical watch logs appear when paired)…"
-  echo "Tip: filter Console.app by subsystem: com.edde746.plezy.watch"
+  echo "Tip: filter Console.app by subsystem: com.jackdanger.plezy.watch"
   /usr/bin/log stream --predicate "$PREDICATE" --style compact
 else
   echo "Streaming from watch simulator…"

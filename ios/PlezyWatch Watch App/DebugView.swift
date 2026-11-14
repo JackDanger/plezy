@@ -57,7 +57,7 @@
       } header: {
         Text("Instrument stream (\(logStore.entries.count))")
       } footer: {
-        Text("Terminal: /usr/bin/log stream --predicate 'subsystem == \"com.edde746.plezy.watch\"'")
+        Text("Terminal: /usr/bin/log stream --predicate 'subsystem == \"com.jackdanger.plezy.watch\"'")
           .font(.system(size: 8))
       }
     }

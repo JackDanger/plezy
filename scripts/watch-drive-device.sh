@@ -5,8 +5,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 WATCH_DEVICE="${WATCH_DEVICE:-Dangerwatch}"
 PHONE_DEVICE="${PHONE_DEVICE:-Dangerphone}"
-BUNDLE_ID="com.edde746.plezy.watchkitapp"
-PHONE_BUNDLE="com.edde746.plezy"
+BUNDLE_ID="com.jackdanger.plezy.watchkitapp"
+PHONE_BUNDLE="com.jackdanger.plezy"
 DERIVED="$HOME/Library/Developer/Xcode/DerivedData"
 LOG="/tmp/plezy-watch-device.log"
 DRIVE_SECS="${DRIVE_SECS:-45}"
@@ -96,7 +96,7 @@ sleep 3
 
 echo "==> Starting Mac log stream -> $LOG"
 rm -f "$LOG"
-/usr/bin/log stream --predicate 'subsystem == "com.edde746.plezy.watch"' --style compact > "$LOG" 2>&1 &
+/usr/bin/log stream --predicate 'subsystem == "com.jackdanger.plezy.watch"' --style compact > "$LOG" 2>&1 &
 LOGPID=$!
 trap 'kill $LOGPID 2>/dev/null || true' EXIT
 sleep 1

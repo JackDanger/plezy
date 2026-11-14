@@ -927,6 +927,45 @@ class _AppDatabaseTestSuite {
           db = AppDatabase.forTesting(NativeDatabase.memory());
         }
       });
+      test('a Music Assistant fork database at v22 gets the upstream steps it never ran', () async {
+        await db.close();
+        final tempDir = await Directory.systemTemp.createTemp('plezy_db_fork_v22_test_');
+        final file = File('${tempDir.path}/plezy_downloads.db');
+        AppDatabase? seeded;
+        AppDatabase? reopened;
+
+        Future<Set<String>> tables(AppDatabase database) async => {
+          for (final row in await database.customSelect("SELECT name FROM sqlite_master WHERE type = 'table'").get())
+            row.read<String>('name'),
+        };
+
+        try {
+          // What the fork's v22 looks like next to upstream's: no MusicSessions,
+          // Connections still carrying is_default, and the fork's own two tables.
+          seeded = AppDatabase.forTesting(NativeDatabase(file));
+          await seeded.select(seeded.musicSessions).get();
+          await seeded.customStatement('DROP TABLE music_sessions');
+          await seeded.customStatement('ALTER TABLE connections ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0');
+          await seeded.customStatement('CREATE TABLE music_pairings (id TEXT PRIMARY KEY)');
+          await seeded.customStatement('CREATE TABLE music_track_resolutions (id TEXT PRIMARY KEY)');
+          await seeded.customStatement('PRAGMA user_version = 22');
+          await seeded.close();
+          seeded = null;
+
+          reopened = AppDatabase.forTesting(NativeDatabase(file));
+          final names = await tables(reopened);
+          expect(names, contains('music_sessions'));
+          expect(names, isNot(contains('music_pairings')));
+          expect(names, isNot(contains('music_track_resolutions')));
+          final columns = await reopened.customSelect('PRAGMA table_info(connections)').get();
+          expect(columns.map((c) => c.read<String>('name')), isNot(contains('is_default')));
+        } finally {
+          await reopened?.close();
+          await seeded?.close();
+          await tempDir.delete(recursive: true);
+          db = AppDatabase.forTesting(NativeDatabase.memory());
+        }
+      });
       test('v21 migration drops connections.is_default without touching api_cache.cached_at', () async {
         await db.close();
         final tempDir = await Directory.systemTemp.createTemp('plezy_db_v21_migration_test_');

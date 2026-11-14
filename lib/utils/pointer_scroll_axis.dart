@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show BindingBase;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
@@ -64,7 +65,7 @@ class PlezyWidgetsBinding extends WidgetsFlutterBinding
   /// Creates the binding on first call and returns it afterwards, mirroring
   /// [WidgetsFlutterBinding.ensureInitialized].
   static WidgetsBinding ensureInitialized() {
-    if (!_initialized) {
+    if (!_initialized && BindingBase.debugBindingType() == null) {
       PlezyWidgetsBinding();
       _initialized = true;
     }
