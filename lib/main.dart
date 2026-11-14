@@ -81,6 +81,7 @@ import 'services/connectivity_probe.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'services/jellyfin_api_cache.dart';
 import 'services/plex_api_cache.dart';
+import 'services/music_assistant/music_assistant_link.dart';
 import 'database/app_database.dart';
 import 'database/download_operations.dart';
 import 'database/tvos_database_recovery_store.dart';
@@ -1751,6 +1752,12 @@ class _MainAppState extends State<MainApp> with WidgetsBindingObserver {
         Provider<ProfileRegistry>(create: (_) => ProfileRegistry(_appDatabase)),
         Provider<ProfileConnectionRegistry>.value(value: _profileConnections),
         Provider<PlexHomeService>.value(value: _plexHomeService),
+        // Speakers in the house, not a media server: one per install, shared
+        // by every profile.
+        ChangeNotifierProvider<MusicAssistantLink>(
+          lazy: false,
+          create: (_) => MusicAssistantLink(store: SettingsMusicAssistantConfigStore(database: _appDatabase))..load(),
+        ),
         ChangeNotifierProvider<ActiveProfileProvider>(
           create: (context) {
             final provider = ActiveProfileProvider(
