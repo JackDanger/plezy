@@ -8,6 +8,7 @@ import 'package:plezy/utils/media_server_http_client.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
+
 import '../../focus/focusable_action_bar.dart';
 import '../../widgets/dialog_action_button.dart';
 import '../../widgets/app_icon.dart';
@@ -213,6 +214,8 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
     // Awaited before rebuilding so the banner cannot survive the clear.
     await StartupDiagnosticsStore.clear();
     if (!mounted) return;
+    await SessionLogFile.clear();
+    if (!mounted) return;
     setState(() {
       MemoryLogOutput.clearLogs();
       _logs = [];
@@ -220,7 +223,7 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
     showSuccessSnackBar(context, t.messages.logsCleared);
   }
 
-  String _formatAllLogs({int? maxBytes}) {
+  String _formatAllLogs({int? maxBytes, String? fileLog}) {
     final sections = <String>[
       if (_deviceInfo.isNotEmpty) _deviceInfo,
       // A launch that failed the startup gate leaves no in-memory log at all —
@@ -245,7 +248,9 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
         logs.write('\nStack trace:\n${log.stackTrace}');
       }
     }
-    final logText = logs.toString();
+    // The file holds more than the memory buffer (the previous run, and every
+    // line since launch), so it is what gets copied when there is one.
+    final logText = fileLog ?? logs.toString();
     return maxBytes == null
         ? '$header$logText'
         : constrainLogUploadPayload(header: header, logs: logText, maxBytes: maxBytes);
@@ -258,8 +263,16 @@ class _LogsScreenState extends State<LogsScreen> with MountedSetStateMixin {
   /// matching the upload path.
   static const int _maxClipboardBytes = 256 * 1024;
 
-  void _copyAllLogs() {
-    Clipboard.setData(ClipboardData(text: _formatAllLogs(maxBytes: _maxClipboardBytes)));
+  Future<void> _copyAllLogs() async {
+    // The file exists only while debug logging is on.
+    final fileLog = SessionLogFile.enabled ? await SessionLogFile.read() : null;
+    if (!mounted) return;
+    await Clipboard.setData(
+      ClipboardData(
+        text: _formatAllLogs(maxBytes: _maxClipboardBytes, fileLog: fileLog),
+      ),
+    );
+    if (!mounted) return;
     showSuccessSnackBar(context, t.messages.logsCopied);
   }
 
