@@ -107,6 +107,8 @@ dev_dependencies:
   archive: ^4.0.9
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   flutter_lints: ^6.0.0
   # Root analysis includes packages/saf_util.
   mgenware_dart_lints: ^8.0.0

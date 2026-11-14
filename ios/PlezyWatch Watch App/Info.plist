@@ -43,7 +43,7 @@
 		<string>audio</string>
 	</array>
 	<key>WKCompanionAppBundleIdentifier</key>
-	<string>com.edde746.plezy</string>
+	<string>com.jackdanger.plezy</string>
 	<key>WKRunsIndependentlyOfCompanionApp</key>
 	<true/>
 </dict>

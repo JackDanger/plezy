@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' show Directory, Platform, ProcessInfo;
 import 'dart:ui' show AppExitResponse;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/semantics.dart' show SemanticsHandle;
 // ignore: depend_on_referenced_packages
 import 'package:shared_preferences_foundation/shared_preferences_foundation.dart';
 import 'package:flutter/material.dart';
@@ -151,13 +152,23 @@ void _registerTvosPlatformPlugins() {
   // SupporterService reaches only in SUPPORTER_MODE=iap builds.
 }
 
+/// The semantics handle taken in debug builds, kept so tests can release it.
+///
+/// Nothing releases it during a normal run, which is the intent — the
+/// accessibility tree should stay up for the whole session. But the test
+/// framework fails any test that finishes with a live `SemanticsHandle`, so
+/// without a way to reach it every integration test would fail at teardown on
+/// an app that is working perfectly.
+@visibleForTesting
+SemanticsHandle? debugSemanticsHandle;
+
 void main() {
   final binding = PlezyWidgetsBinding.ensureInitialized();
   if (agentControlEnabled) AgentControlService.instance.register();
   AndroidExitDiagnostics.markStartupPhase(AndroidStartupPhase.dartMain);
   // Keep the accessibility tree available to Maestro and other UI automation
   // without adding release-build overhead.
-  if (kDebugMode) binding.ensureSemantics();
+  if (kDebugMode) debugSemanticsHandle = binding.ensureSemantics();
   // Android: skip the per-frame semantics pass when the only bound
   // accessibility service cannot read it (launcher hooks, key remappers).
   AssistiveTechnologyService.instance.ensureStarted();
