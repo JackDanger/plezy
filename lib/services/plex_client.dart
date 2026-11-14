@@ -91,6 +91,7 @@ part 'plex_client/parts/playlists.dart';
 part 'plex_client/parts/collections.dart';
 part 'plex_client/parts/play_queues.dart';
 part 'plex_client/parts/metadata_edit.dart';
+part 'plex_client/parts/library_mix.dart';
 
 const _plexVideoTranscodeBaseEndpoint = '/video/:/transcode/universal';
 const _plexVideoHlsStartEndpoint = '$_plexVideoTranscodeBaseEndpoint/start.m3u8';
@@ -3650,14 +3651,82 @@ class PlexClient
   /// station uri's trailing `?type=10` (track results) is part of the
   /// station path and rides inside the encoded uri value. Consumed as a
   /// plain track list — music playback is queue-managed client-side.
+  ///
   /// Failures propagate (matching the Jellyfin implementation) so callers
   /// can tell a failed mix from a genuinely empty one.
+  ///
+  /// A station starts with five tracks and adds five each time its window is
+  /// read centered on the last one, so 100 tracks is some twenty round trips.
+  /// Returns once [_instantMixStartCount] are in and grows the rest through
+  /// [onMore]; without [onMore] it grows all of [limit] first.
   @override
-  Future<List<MediaItem>> fetchInstantMix(String itemId, {int limit = 100}) async {
-    final stationUri = '${await buildMetadataUri(itemId)}/station/${const Uuid().v4()}?type=${PlexMetadataType.track}';
-    final queue = await createPlayQueue(uri: stationUri, type: 'audio');
-    final tracks = queue.items ?? const <MediaItem>[];
+  Future<List<MediaItem>> fetchInstantMix(
+    String itemId, {
+    int limit = 100,
+    bool Function(List<MediaItem> more)? onMore,
+  }) async {
+    var queue = await _createStation(itemId);
+    if (queue.items?.isEmpty ?? true) {
+      final seed = await _stationSeedFor(itemId);
+      if (seed != null) queue = await _createStation(seed);
+    }
+    var tracks = queue.items ?? const <MediaItem>[];
+    tracks = await _growStation(queue.playQueueID, tracks, onMore == null ? limit : _instantMixStartCount);
+    if (onMore != null && tracks.length < limit) {
+      unawaited(_growStationInto(queue.playQueueID, tracks, limit, onMore));
+    }
     return tracks.length > limit ? tracks.sublist(0, limit) : tracks;
+  }
+
+  static const _instantMixStartCount = 25;
+
+  Future<PlayQueueResponse> _createStation(String itemId) async {
+    final stationUri = '${await buildMetadataUri(itemId)}/station/${const Uuid().v4()}?type=${PlexMetadataType.track}';
+    return createPlayQueue(uri: stationUri, type: 'audio');
+  }
+
+  /// Plex builds stations from an artist or a track, and an album's comes
+  /// back empty. Radio from an album starts at the album's artist.
+  Future<String?> _stationSeedFor(String itemId) async {
+    final metadata = await _fetchRawMetadataJsonCacheFirst(itemId);
+    if (metadata?['type'] != 'album') return null;
+    return metadata?['parentRatingKey']?.toString();
+  }
+
+  /// [tracks] of station queue [playQueueId], grown toward [target]. Stops
+  /// early when the station has nothing more to add.
+  Future<List<MediaItem>> _growStation(int playQueueId, List<MediaItem> tracks, int target) async {
+    while (tracks.isNotEmpty && tracks.length < target) {
+      final last = switch (tracks.last) {
+        PlexMediaItem(:final playQueueItemId?) => playQueueItemId,
+        _ => null,
+      };
+      if (last == null) break;
+      final window = await getPlayQueue(playQueueId, center: '$last', window: target, includeBefore: 1);
+      final grown = window?.items ?? const <MediaItem>[];
+      if (grown.length <= tracks.length) break;
+      tracks = grown;
+    }
+    return tracks;
+  }
+
+  Future<void> _growStationInto(
+    int playQueueId,
+    List<MediaItem> tracks,
+    int limit,
+    bool Function(List<MediaItem> more) onMore,
+  ) async {
+    try {
+      while (tracks.length < limit) {
+        final grown = await _growStation(playQueueId, tracks, tracks.length + _instantMixStartCount);
+        if (grown.length <= tracks.length) return;
+        final more = grown.sublist(tracks.length, grown.length.clamp(0, limit));
+        tracks = grown;
+        if (!onMore(more)) return;
+      }
+    } catch (e, st) {
+      appLogger.w('Stopped growing instant mix $playQueueId', error: e, stackTrace: st);
+    }
   }
 
   /// Plex lyrics: sidecar `.lrc`/`.txt` files surface as track Part streams

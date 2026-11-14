@@ -551,6 +551,73 @@ void main() {
     );
   });
 
+  group('station radio', () {
+    PlexClient stationClient(Future<http.Response> Function(http.Request request) handler) => testPlexClient(
+      serverId: publicServerId,
+      profileScopeId: defaultProfileScopeId,
+      config: testPlexConfig(machineIdentifier: 'machine-1'),
+      handler: handler,
+    );
+
+    http.Response container(Map<String, dynamic> body) =>
+        http.Response(jsonEncode({'MediaContainer': body}), 200, headers: {'content-type': 'application/json'});
+
+    Map<String, dynamic> station(int queueId, int count) => {
+      'playQueueID': queueId,
+      'playQueueVersion': 1,
+      'Metadata': [
+        for (var i = 1; i <= count; i++) {'playQueueItemID': i, 'ratingKey': 't$i', 'type': 'track'},
+      ],
+    };
+
+    test('an album has no station, so its radio starts from the album artist', () async {
+      final created = <String>[];
+      final client = stationClient((request) async {
+        final uri = request.url.queryParameters['uri'] ?? '';
+        if (request.method == 'POST' && request.url.path == '/playQueues') {
+          created.add(uri);
+          return uri.contains('/library/metadata/album-1/station/')
+              ? container(station(7, 0))
+              : container(station(8, 5));
+        }
+        if (request.url.path == '/library/metadata/album-1') {
+          return container({
+            'Metadata': [
+              {'ratingKey': 'album-1', 'type': 'album', 'parentRatingKey': 'artist-1'},
+            ],
+          });
+        }
+        return container(station(8, 5));
+      });
+      addTearDown(client.close);
+
+      final tracks = await client.fetchInstantMix('album-1', limit: 5);
+
+      expect(created, hasLength(2));
+      expect(created.last, contains('/library/metadata/artist-1/station/'));
+      expect(tracks.map((t) => t.id), ['t1', 't2', 't3', 't4', 't5']);
+    });
+
+    test('a station is read again centered on its last track until it has enough to start', () async {
+      // Plex adds five tracks each time the window is read centered on the
+      // last one; a plain read stays at what it has.
+      var size = 5;
+      final centers = <String?>[];
+      final client = stationClient((request) async {
+        if (request.method == 'POST') return container(station(8, size));
+        centers.add(request.url.queryParameters['center']);
+        size += 5;
+        return container(station(8, size));
+      });
+      addTearDown(client.close);
+
+      final tracks = await client.fetchInstantMix('artist-1', limit: 20);
+
+      expect(tracks, hasLength(20));
+      expect(centers, ['5', '10', '15']);
+    });
+  });
+
   group('show play queue', () {
     setUp(() async {
       resetSharedPreferencesForTest();
