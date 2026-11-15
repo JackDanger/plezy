@@ -1,17 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:provider/provider.dart';
 
 import '../../focus/focusable_action_bar.dart';
 import '../../i18n/strings.g.dart';
+import '../../services/music/music_output_controller.dart';
 import '../app_icon.dart';
+import 'output_picker_sheet.dart';
 
 /// Standard action list for the music detail screens (album/artist):
-/// a labeled Play pill, a shuffle icon, an optional Radio button, labeled
-/// where there is room (pass null when the server lacks the capability), an
-/// optional [download] action (the album download button), and an optional
-/// [trailing] action (the album overflow ⋮). Render inside a
-/// [FocusableActionBar] — icon actions get the bar's default focus-background
-/// treatment.
+/// a labeled Play pill, an output picker when there is anywhere else to play,
+/// a shuffle icon, an optional Radio button, labeled where there is room
+/// (pass null when the server lacks the capability), an optional [download] action (the album download
+/// button), and an optional [trailing] action (the album overflow ⋮). Render
+/// inside a [FocusableActionBar] — icon actions get the bar's default
+/// focus-background treatment.
+///
+/// The output picker sits immediately after Play on purpose: "play this in the
+/// kitchen" is one decision, not two, and the button has to be somewhere the
+/// user is already looking *before* they press play. Putting it only on the
+/// now-playing screen would mean every session starts on the wrong speaker and
+/// gets moved.
 List<FocusableAction> buildMusicActions({
   required BuildContext context,
   required VoidCallback onPlay,
@@ -20,8 +31,13 @@ List<FocusableAction> buildMusicActions({
   FocusableAction? download,
   FocusableAction? trailing,
 }) {
-  // A phone has no room for a second label beside Play and an album's
-  // download and overflow buttons.
+  // Nullable, like the other music lookups that can mount above the profile
+  // session (`MusicPlaybackService?` in the nav rail and the context menu).
+  // No controller means nothing knows of anywhere else to play, which is
+  // exactly when there should be no picker.
+  final outputs = context.watch<MusicOutputController?>();
+  // A phone has no room for a second label beside Play, the output picker and
+  // an album's download and overflow buttons.
   final labelRadio = MediaQuery.sizeOf(context).width >= 600;
   return [
     FocusableAction(
@@ -29,6 +45,13 @@ List<FocusableAction> buildMusicActions({
       onPressed: onPlay,
       builder: (context, state) => _MusicPlayButton(onPressed: onPlay, showFocus: state.showFocus),
     ),
+    if (outputs != null && outputs.hasRemoteOutputs)
+      FocusableAction(
+        debugLabel: 'music_output',
+        icon: outputs.selected.isThisDevice ? Symbols.smartphone_rounded : Symbols.speaker_rounded,
+        tooltip: outputs.selected.name,
+        onPressed: () => unawaited(showOutputPickerSheet(context)),
+      ),
     FocusableAction(
       debugLabel: 'music_shuffle',
       icon: Symbols.shuffle_rounded,

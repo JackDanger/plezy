@@ -818,6 +818,27 @@ class Translations$settings$en {
 	/// en: 'Reopen the last song paused where it left off when the app starts'
 	String get resumeMusicOnLaunchDescription => 'Reopen the last song paused where it left off when the app starts';
 
+	/// en: 'Speakers'
+	String get musicAssistantSpeakers => 'Speakers';
+
+	/// en: 'Play music on Sonos and other speakers through a Music Assistant server'
+	String get musicAssistantSpeakersDescription => 'Play music on Sonos and other speakers through a Music Assistant server';
+
+	/// en: 'Connected'
+	String get musicAssistantConnected => 'Connected';
+
+	/// en: 'Not reachable'
+	String get musicAssistantNotReachable => 'Not reachable';
+
+	/// en: 'Needs a sign-in'
+	String get musicAssistantNeedsSignIn => 'Needs a sign-in';
+
+	/// en: 'Use a different server'
+	String get musicAssistantChangeServer => 'Use a different server';
+
+	/// en: 'Forget this server'
+	String get musicAssistantForget => 'Forget this server';
+
 	/// en: 'Show chapter markers on seek bar'
 	String get showChapterMarkersOnTimeline => 'Show chapter markers on seek bar';
 
@@ -3347,6 +3368,12 @@ class Translations$discover$en {
 	);
 
 	late final Translations$discover$person$en person = Translations$discover$person$en.internal(_root);
+
+	/// en: 'Recently Played'
+	String get recentlyPlayed => 'Recently Played';
+
+	/// en: 'Random Albums'
+	String get randomAlbums => 'Random Albums';
 }
 
 // Path: errors
@@ -4399,6 +4426,69 @@ class Translations$music$en {
 	String noAudioUrl({required Object track}) => 'No audio URL is available for ${track}';
 
 	late final Translations$music$discography$en discography = Translations$music$discography$en.internal(_root);
+
+	/// en: 'Play on'
+	String get playOn => 'Play on';
+
+	/// en: 'This device'
+	String get outputThisDevice => 'This device';
+
+	/// en: 'Choose speaker'
+	String get outputChooseSpeaker => 'Choose speaker';
+
+	/// en: 'AirPlay'
+	String get outputAirPlay => 'AirPlay';
+
+	/// en: 'Choose a destination'
+	String get outputAirPlayChoose => 'Choose a destination';
+
+	/// en: 'Streaming to ${name}'
+	String outputAirPlayActive({required Object name}) => 'Streaming to ${name}';
+
+	/// en: 'Music Assistant'
+	String get outputSectionServer => 'Music Assistant';
+
+	/// en: 'The same speaker can appear in both. Via AirPlay your phone is the source; via Music Assistant it is not.'
+	String get outputAirPlaySameSpeakerNote => 'The same speaker can appear in both. Via AirPlay your phone is the source; via Music Assistant it is not.';
+
+	/// en: 'Speakers'
+	String get outputSpeakers => 'Speakers';
+
+	/// en: 'Unavailable'
+	String get outputUnavailable => 'Unavailable';
+
+	/// en: 'No speakers found'
+	String get outputNoneFound => 'No speakers found';
+
+	/// en: 'Connect a Music Assistant server to play to Sonos and other speakers.'
+	String get outputNoneFoundDetail => 'Connect a Music Assistant server to play to Sonos and other speakers.';
+
+	/// en: 'Group'
+	String get outputGroup => 'Group';
+
+	/// en: 'Play on several speakers'
+	String get outputGroupAction => 'Play on several speakers';
+
+	/// en: 'Choose at least two'
+	String get outputGroupPickTwo => 'Choose at least two';
+
+	/// en: 'Play on ${n} speakers'
+	String outputGroupPlay({required Object n}) => 'Play on ${n} speakers';
+
+	/// en: '${names} can’t play in sync with the others. Untick it and try again.'
+	String outputGroupRefused({required Object names}) => '${names} can’t play in sync with the others. Untick it and try again.';
+
+	/// en: 'Creating a speaker group takes a Music Assistant admin account. Sign in with one, or create the group in Music Assistant.'
+	String get outputGroupNeedsAdmin => 'Creating a speaker group takes a Music Assistant admin account. Sign in with one, or create the group in Music Assistant.';
+
+	/// en: 'Couldn’t group those speakers: ${error}'
+	String outputGroupFailed({required Object error}) => 'Couldn’t group those speakers: ${error}';
+
+	/// en: 'Playing something else'
+	String get outputPlayingElsewhere => 'Playing something else';
+
+	/// en: 'Server not responding'
+	String get outputServerUnreachable => 'Server not responding';
 }
 
 // Path: watchTogether
@@ -6111,6 +6201,69 @@ class Translations$addServer$en {
 
 	/// en: 'The server redirected to an unsupported URL. Enter the final ${product} URL directly.'
 	String redirectUnsupportedEnterFinal({required Object product}) => 'The server redirected to an unsupported URL. Enter the final ${product} URL directly.';
+
+	/// en: 'Nothing answered at ${address}. Check the server is running, and that Plezy is allowed access to your Local Network in iOS Settings > Privacy & Security.'
+	String musicAssistantUnreachable({required Object address}) => 'Nothing answered at ${address}. Check the server is running, and that Plezy is allowed access to your Local Network in iOS Settings > Privacy & Security.';
+
+	/// en: 'Server URL'
+	String get musicAssistantUrl => 'Server URL';
+
+	/// en: 'Port 8095 unless you changed it.'
+	String get musicAssistantUrlHelper => 'Port 8095 unless you changed it.';
+
+	/// en: 'Enter your Music Assistant server URL'
+	String get enterMusicAssistantUrlError => 'Enter your Music Assistant server URL';
+
+	/// en: 'Looking for local Music Assistant servers...'
+	String get searchingLocalMusicAssistantServers => 'Looking for local Music Assistant servers...';
+
+	/// en: 'Found on your network'
+	String get musicAssistantFoundOnNetwork => 'Found on your network';
+
+	/// en: 'No Music Assistant servers found'
+	String get musicAssistantNoneFound => 'No Music Assistant servers found';
+
+	/// en: 'Make sure it is on the same Wi-Fi, then search again — or enter its address yourself.'
+	String get musicAssistantNoneFoundDetail => 'Make sure it is on the same Wi-Fi, then search again — or enter its address yourself.';
+
+	/// en: 'Search again'
+	String get musicAssistantSearchAgain => 'Search again';
+
+	/// en: 'Enter an address instead'
+	String get musicAssistantEnterManually => 'Enter an address instead';
+
+	/// en: 'Already added'
+	String get musicAssistantAlreadyAdded => 'Already added';
+
+	/// en: 'Tap to connect'
+	String get musicAssistantTapToAdd => 'Tap to connect';
+
+	/// en: 'Tap to sign in'
+	String get musicAssistantTapToSignIn => 'Tap to sign in';
+
+	/// en: 'Music Assistant didn’t accept that. Check the username and password you use for its web interface.'
+	String get musicAssistantSignInRejected => 'Music Assistant didn’t accept that. Check the username and password you use for its web interface.';
+
+	/// en: 'Access token (optional)'
+	String get musicAssistantToken => 'Access token (optional)';
+
+	/// en: 'Leave empty unless your server asks for one.'
+	String get musicAssistantTokenHelper => 'Leave empty unless your server asks for one.';
+
+	/// en: 'Instead of a password, you can paste a long-lived token from Music Assistant’s settings.'
+	String get musicAssistantTokenInsteadHelper => 'Instead of a password, you can paste a long-lived token from Music Assistant’s settings.';
+
+	/// en: 'Add server'
+	String get addMusicAssistantServer => 'Add server';
+
+	/// en: 'Change this server’s address?'
+	String get musicAssistantRepointTitle => 'Change this server’s address?';
+
+	/// en: '“${name}” is already saved at ${current}. Adding it again will point it at ${replacement} instead.'
+	String musicAssistantRepointBody({required Object name, required Object current, required Object replacement}) => '“${name}” is already saved at ${current}. Adding it again will point it at ${replacement} instead.';
+
+	/// en: 'Change address'
+	String get musicAssistantRepointConfirm => 'Change address';
 }
 
 // Path: deepLinks
@@ -8387,6 +8540,13 @@ extension on Translations {
 			'settings.followServerTrackSelectionsDescription' => 'On episode change, apply the audio and subtitles selected on the server instead of carrying over the current choice',
 			'settings.resumeMusicOnLaunch' => 'Remember music session',
 			'settings.resumeMusicOnLaunchDescription' => 'Reopen the last song paused where it left off when the app starts',
+			'settings.musicAssistantSpeakers' => 'Speakers',
+			'settings.musicAssistantSpeakersDescription' => 'Play music on Sonos and other speakers through a Music Assistant server',
+			'settings.musicAssistantConnected' => 'Connected',
+			'settings.musicAssistantNotReachable' => 'Not reachable',
+			'settings.musicAssistantNeedsSignIn' => 'Needs a sign-in',
+			'settings.musicAssistantChangeServer' => 'Use a different server',
+			'settings.musicAssistantForget' => 'Forget this server',
 			'settings.showChapterMarkersOnTimeline' => 'Show chapter markers on seek bar',
 			'settings.showChapterMarkersOnTimelineDescription' => 'Segment the seek bar at chapter boundaries',
 			'settings.specialsOrdering' => 'Specials in episode order',
@@ -8624,6 +8784,8 @@ extension on Translations {
 			'themeEditor.title' => 'Custom Theme',
 			'themeEditor.startFrom' => 'Start from',
 			'themeEditor.startFromDescription' => 'Copy all colors from another theme',
+			_ => null,
+		} ?? switch (path) {
 			'themeEditor.colors' => 'Colors',
 			'themeEditor.preview' => 'Preview',
 			'themeEditor.slots.bg' => 'Background',
@@ -8631,8 +8793,6 @@ extension on Translations {
 			'themeEditor.slots.outline' => 'Outline',
 			'themeEditor.slots.text' => 'Text',
 			'themeEditor.slots.textMuted' => 'Secondary text',
-			_ => null,
-		} ?? switch (path) {
 			'themeEditor.slots.accent' => 'Accent',
 			'themeEditor.opacity' => 'Opacity',
 			'themeEditor.hexHint' => '#RRGGBB or #AARRGGBB',
@@ -9138,6 +9298,8 @@ extension on Translations {
 			'profiles.incorrectPin' => 'Incorrect PIN.',
 			'profiles.incorrectPinTryAgain' => 'Incorrect PIN. Please try again.',
 			'profiles.sourceProfileMissingParentAccount' => 'Source profile is missing its parent account.',
+			_ => null,
+		} ?? switch (path) {
 			'profiles.failedToLoadHomeUsers' => 'Could not load your Plex Home users. Check your connection and try again.',
 			'profiles.failedToVerifyPin' => 'Failed to verify PIN.',
 			'profiles.newProfile' => 'New profile',
@@ -9145,8 +9307,6 @@ extension on Translations {
 			'profiles.pinProtectionOptional' => 'PIN protection (optional)',
 			'profiles.pinExplain' => '4-digit PIN required to switch profiles.',
 			'profiles.continueButton' => 'Continue',
-			_ => null,
-		} ?? switch (path) {
 			'profiles.pinsDontMatch' => 'PINs don\'t match',
 			'profiles.tokenIdentityMismatch' => 'The Plex profile token resolved to an unexpected server',
 			'connections.sectionTitle' => 'Connections',
@@ -9248,6 +9408,8 @@ extension on Translations {
 			'discover.person.birthplace' => 'Birthplace',
 			'discover.person.dateWithAge' => ({required Object date, required Object age}) => '${date} (age ${age})',
 			'discover.person.dateWithAgeAtDeath' => ({required Object date, required Object age}) => '${date} (aged ${age})',
+			'discover.recentlyPlayed' => 'Recently Played',
+			'discover.randomAlbums' => 'Random Albums',
 			'errors.searchFailed' => ({required Object error}) => 'Search failed: ${error}',
 			'errors.searchUnavailable' => 'Search could not reach any media server.',
 			'errors.connectionTimeout' => ({required Object context}) => 'Connection timeout while loading ${context}',
@@ -9650,6 +9812,8 @@ extension on Translations {
 			'liveTv.recordingCancelled' => 'Recording canceled',
 			'liveTv.recordingRuleDeleted' => 'Recording rule deleted',
 			'liveTv.processRecordingRules' => 'Re-evaluate rules',
+			_ => null,
+		} ?? switch (path) {
 			'liveTv.recordingInProgress' => 'Recording now',
 			'liveTv.recordingsCount' => ({required Object count}) => '${count} scheduled',
 			'liveTv.editRule' => 'Edit rule',
@@ -9659,8 +9823,6 @@ extension on Translations {
 			'liveTv.guideReloadFailed' => 'Couldn\'t refresh the guide',
 			'liveTv.rulesProcessRequested' => 'Rule re-evaluation requested',
 			'liveTv.rulesProcessFailed' => 'Couldn\'t re-evaluate recording rules',
-			_ => null,
-		} ?? switch (path) {
 			'liveTv.recordShow' => 'Record show',
 			'liveTv.recordSettings.startEarly' => 'Start early (seconds)',
 			'liveTv.recordSettings.endLate' => 'End late (seconds)',
@@ -9752,6 +9914,27 @@ extension on Translations {
 			'music.discography.singlesAndEps' => 'Singles & EPs',
 			'music.discography.live' => 'Live',
 			'music.discography.compilations' => 'Compilations',
+			'music.playOn' => 'Play on',
+			'music.outputThisDevice' => 'This device',
+			'music.outputChooseSpeaker' => 'Choose speaker',
+			'music.outputAirPlay' => 'AirPlay',
+			'music.outputAirPlayChoose' => 'Choose a destination',
+			'music.outputAirPlayActive' => ({required Object name}) => 'Streaming to ${name}',
+			'music.outputSectionServer' => 'Music Assistant',
+			'music.outputAirPlaySameSpeakerNote' => 'The same speaker can appear in both. Via AirPlay your phone is the source; via Music Assistant it is not.',
+			'music.outputSpeakers' => 'Speakers',
+			'music.outputUnavailable' => 'Unavailable',
+			'music.outputNoneFound' => 'No speakers found',
+			'music.outputNoneFoundDetail' => 'Connect a Music Assistant server to play to Sonos and other speakers.',
+			'music.outputGroup' => 'Group',
+			'music.outputGroupAction' => 'Play on several speakers',
+			'music.outputGroupPickTwo' => 'Choose at least two',
+			'music.outputGroupPlay' => ({required Object n}) => 'Play on ${n} speakers',
+			'music.outputGroupRefused' => ({required Object names}) => '${names} can’t play in sync with the others. Untick it and try again.',
+			'music.outputGroupNeedsAdmin' => 'Creating a speaker group takes a Music Assistant admin account. Sign in with one, or create the group in Music Assistant.',
+			'music.outputGroupFailed' => ({required Object error}) => 'Couldn’t group those speakers: ${error}',
+			'music.outputPlayingElsewhere' => 'Playing something else',
+			'music.outputServerUnreachable' => 'Server not responding',
 			'watchTogether.title' => 'Watch Together',
 			'watchTogether.description' => 'Watch content in sync with friends and family',
 			'watchTogether.createRoom' => 'Create Room',
@@ -10143,6 +10326,8 @@ extension on Translations {
 			'performanceOverlay.rotation' => 'Rotation',
 			'performanceOverlay.dvSource' => 'DV Source',
 			'performanceOverlay.dvPath' => 'DV Path',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.dvRouteDecoder' => 'Dolby Vision decoder',
 			'performanceOverlay.dvRouteDecoderP81' => 'Dolby Vision decoder (P7→8.1)',
 			'performanceOverlay.dvRouteBaseLayer' => 'Base layer',
@@ -10173,8 +10358,6 @@ extension on Translations {
 			'performanceOverlay.speed' => 'Speed',
 			'performanceOverlay.player' => 'Player',
 			'performanceOverlay.playMethod' => 'Play Method',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.memory' => 'Memory',
 			'performanceOverlay.uiFps' => 'UI FPS',
 			'performanceOverlay.fps' => 'FPS',
@@ -10439,6 +10622,27 @@ extension on Translations {
 			'addServer.redirectDifferentHost' => ({required Object product}) => 'The server redirected to a different host. Enter the final ${product} URL directly.',
 			'addServer.redirectInsecure' => 'The server redirected from HTTPS to an insecure URL',
 			'addServer.redirectUnsupportedEnterFinal' => ({required Object product}) => 'The server redirected to an unsupported URL. Enter the final ${product} URL directly.',
+			'addServer.musicAssistantUnreachable' => ({required Object address}) => 'Nothing answered at ${address}. Check the server is running, and that Plezy is allowed access to your Local Network in iOS Settings > Privacy & Security.',
+			'addServer.musicAssistantUrl' => 'Server URL',
+			'addServer.musicAssistantUrlHelper' => 'Port 8095 unless you changed it.',
+			'addServer.enterMusicAssistantUrlError' => 'Enter your Music Assistant server URL',
+			'addServer.searchingLocalMusicAssistantServers' => 'Looking for local Music Assistant servers...',
+			'addServer.musicAssistantFoundOnNetwork' => 'Found on your network',
+			'addServer.musicAssistantNoneFound' => 'No Music Assistant servers found',
+			'addServer.musicAssistantNoneFoundDetail' => 'Make sure it is on the same Wi-Fi, then search again — or enter its address yourself.',
+			'addServer.musicAssistantSearchAgain' => 'Search again',
+			'addServer.musicAssistantEnterManually' => 'Enter an address instead',
+			'addServer.musicAssistantAlreadyAdded' => 'Already added',
+			'addServer.musicAssistantTapToAdd' => 'Tap to connect',
+			'addServer.musicAssistantTapToSignIn' => 'Tap to sign in',
+			'addServer.musicAssistantSignInRejected' => 'Music Assistant didn’t accept that. Check the username and password you use for its web interface.',
+			'addServer.musicAssistantToken' => 'Access token (optional)',
+			'addServer.musicAssistantTokenHelper' => 'Leave empty unless your server asks for one.',
+			'addServer.musicAssistantTokenInsteadHelper' => 'Instead of a password, you can paste a long-lived token from Music Assistant’s settings.',
+			'addServer.addMusicAssistantServer' => 'Add server',
+			'addServer.musicAssistantRepointTitle' => 'Change this server’s address?',
+			'addServer.musicAssistantRepointBody' => ({required Object name, required Object current, required Object replacement}) => '“${name}” is already saved at ${current}. Adding it again will point it at ${replacement} instead.',
+			'addServer.musicAssistantRepointConfirm' => 'Change address',
 			'deepLinks.invalid' => 'This Plezy link isn\'t valid.',
 			'deepLinks.profileNotFound' => ({required Object profile}) => 'No profile matches "${profile}".',
 			'deepLinks.serverUnavailable' => 'Couldn\'t reach the server for this link.',

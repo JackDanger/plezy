@@ -20,6 +20,7 @@ import '../../widgets/settings_page.dart';
 import '../../widgets/settings_section.dart';
 import 'external_player_screen.dart';
 import 'mpv_config_screen.dart';
+import 'music_assistant_settings_screen.dart';
 import 'settings_utils.dart';
 import 'subtitle_styling_screen.dart';
 
@@ -128,6 +129,7 @@ class PlaybackSettingsScreen extends StatelessWidget {
                 // machine too weak for a codec says so (#2443).
                 if (PlatformDetector.isDesktopOS()) _videoCodecsTile(),
                 _musicQualityTile(),
+                _speakersTile(),
               ],
             ),
 
@@ -737,6 +739,13 @@ class PlaybackSettingsScreen extends StatelessWidget {
 
   String _musicQualityLabel(AudioQualityPreset preset) =>
       preset.isOriginal ? t.videoControls.qualityOriginal : '${preset.bitrateKbps} kbps';
+
+  Widget _speakersTile() => SettingNavigationTile(
+    icon: Symbols.speaker_group_rounded,
+    title: t.settings.musicAssistantSpeakers,
+    subtitle: t.settings.musicAssistantSpeakersDescription,
+    destinationBuilder: (_) => const MusicAssistantSettingsScreen(),
+  );
 
   Widget _mpvConfigTile() => SettingNavigationTile(
     icon: Symbols.tune_rounded,

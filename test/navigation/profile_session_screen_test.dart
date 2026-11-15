@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:plezy/services/music_assistant/music_assistant_link.dart';
 import 'package:plezy/connection/connection_registry.dart';
 import 'package:plezy/database/app_database.dart';
 import 'package:plezy/focus/covered_route_focus_boundary.dart';
@@ -28,6 +29,7 @@ import 'package:provider/provider.dart';
 import '../test_helpers/io_fakes.dart';
 import '../test_helpers/multi_server_fixtures.dart';
 import '../test_helpers/prefs.dart';
+import '../music_assistant/test_link.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -437,6 +439,7 @@ class _SessionGraph {
         ChangeNotifierProvider<ActiveProfileProvider>.value(value: activeProfile),
         ChangeNotifierProvider<MultiServerProvider>.value(value: multiServer),
         ChangeNotifierProvider<OfflineWatchSyncService>.value(value: offlineWatch),
+        ChangeNotifierProvider<MusicAssistantLink>(create: (_) => emptyTestLink()),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
