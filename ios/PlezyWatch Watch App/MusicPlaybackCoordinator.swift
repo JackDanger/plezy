@@ -70,18 +70,22 @@ final class MusicPlaybackCoordinator {
     _ playlist: MusicItem,
     shuffle: Bool = false,
     startIndex: Int = 0,
+    startTrackKey: String? = nil,
     connectivity: WatchConnectivityManager
   ) async -> String? {
     guard client.hasCredentials else { return "No server credentials" }
     WatchInstrument.action("playPlaylist", detail: "'\(playlist.title)' shuffle=\(shuffle) start=\(startIndex)")
 
-    guard let result = await client.createPlaylistQueue(ratingKey: playlist.ratingKey, shuffle: shuffle) else {
+    guard
+      let result = await client.createPlaylistQueue(
+        ratingKey: playlist.ratingKey, shuffle: shuffle, startKey: startTrackKey)
+    else {
       WKInterfaceDevice.current().play(.failure)
       return client.isServerUnreachable ? Self.unreachable : "Failed to create play queue"
     }
     return await start(
       result,
-      startIndex: startIndex,
+      startIndex: result.selectedIndex ?? startIndex,
       isShuffled: shuffle,
       connectivity: connectivity
     ) {

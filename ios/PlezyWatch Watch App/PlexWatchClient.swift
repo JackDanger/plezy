@@ -292,17 +292,31 @@ class PlexWatchClient {
     }
   }
 
-  /// Get tracks in a playlist
-  func getPlaylistItems(ratingKey: String) async -> [MusicItem] {
-    await getMetadataList("/playlists/\(ratingKey)/items")
+  /// The first [limit] tracks of a playlist, for its track list. Plex's
+  /// built-in smart playlists run to tens of thousands of tracks; playing one
+  /// goes through a server-side play queue and never needs them all here.
+  func getPlaylistItems(ratingKey: String, limit: Int = 200) async -> [MusicItem] {
+    await getMetadataList(
+      "/playlists/\(ratingKey)/items?X-Plex-Container-Start=0&X-Plex-Container-Size=\(limit)")
   }
 
   /// Create a play queue from a playlist
-  func createPlaylistQueue(ratingKey: String, shuffle: Bool = false) async -> PlayQueueResult? {
+  /// With [startKey], the queue starts at that track of the playlist and Plex
+  /// sends the stretch around it, so a tap far down a long playlist plays
+  /// the track tapped; the result's items then begin at
+  /// [PlayQueueResult.selectedIndex].
+  func createPlaylistQueue(ratingKey: String, shuffle: Bool = false, startKey: String? = nil) async
+    -> PlayQueueResult?
+  {
     guard let creds = credentials else { return nil }
 
     var params = "type=audio&playlistID=\(ratingKey)"
     if shuffle { params += "&shuffle=1" }
+    if let startKey, !shuffle,
+      let key = "/library/metadata/\(startKey)".addingPercentEncoding(withAllowedCharacters: .alphanumerics)
+    {
+      params += "&key=\(key)"
+    }
 
     guard let base = await apiBase() else { return nil }
     let urlString = "\(base)/playQueues?\(params)&X-Plex-Token=\(creds.token)"
@@ -326,7 +340,9 @@ class PlexWatchClient {
       let items = metadata.compactMap { parseMusicItem($0) }
       WatchInstrument.plex("Created playlist queue \(queueId) with \(items.count) items")
 
-      return PlayQueueResult(playQueueId: queueId, items: items)
+      let selectedId = container["playQueueSelectedItemID"] as? Int
+      let selectedIndex = selectedId.flatMap { id in items.firstIndex { $0.playQueueItemID == id } }
+      return PlayQueueResult(playQueueId: queueId, items: items, selectedIndex: selectedIndex)
     } catch {
       WatchInstrument.plex("Create playlist queue error: \(error)")
       return nil
@@ -1492,6 +1508,8 @@ struct MusicItem: Identifiable {
 struct PlayQueueResult {
   let playQueueId: Int
   let items: [MusicItem]
+  /// Where in [items] the server put the track the queue was started at.
+  var selectedIndex: Int? = nil
 
   /// Resolve stream URLs for the first few tracks; keep the full catalog for lazy advance.
   func prepareForPlayback(client: PlexWatchClient, prefetchCount: Int = 2, startIndex: Int = 0) async
