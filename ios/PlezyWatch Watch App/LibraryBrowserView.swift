@@ -399,11 +399,13 @@ struct PlaylistDetailView: View {
     guard !isActioning else { return }
     isActioning = true
     errorMessage = nil
+    let startTrackKey = shuffle || startIndex >= tracks.count ? nil : tracks[startIndex].ratingKey
     Task {
       let error = await MusicPlaybackCoordinator.shared.playPlaylist(
         playlist,
         shuffle: shuffle,
         startIndex: startIndex,
+        startTrackKey: startTrackKey,
         connectivity: connectivity
       )
       await MainActor.run {

@@ -363,10 +363,13 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     guard let ref = playQueueRef, !serverQueueExhausted else { return false }
 
     let generation = queueGeneration
-    // Centred on the last entry, which is what makes a station add more.
-    // The window is wide enough to start at the head of what is loaded.
-    let center = ref.isContinuous ? catalog.last?.playQueueItemID : nil
-    let window = catalog.count + 50
+    // Centred on the last entry: that is what makes a station add more, and
+    // what reaches past the first stretch of a long queue (read without a
+    // center, Plex sends a playlist's queue from its head, about 21 tracks).
+    // A station's window is wide enough to start at the head of what is
+    // loaded; any other queue only needs what comes next.
+    let center = catalog.last?.playQueueItemID
+    let window = ref.isContinuous ? catalog.count + 50 : 50
     let task = Task { @MainActor [weak self] () -> Bool in
       let fetched = await PlexWatchClient.shared.fetchPlayQueue(
         queueId: ref.playQueueId,
