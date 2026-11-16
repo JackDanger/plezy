@@ -4422,6 +4422,15 @@ class Translations$music$en {
 	/// en: 'The server has no radio for this'
 	String get instantMixEmpty => 'The server has no radio for this';
 
+	/// en: 'Mixes for you'
+	String get mixesForYou => 'Mixes for you';
+
+	/// en: 'Couldn't start this mix'
+	String get mixFailed => 'Couldn\'t start this mix';
+
+	/// en: 'This mix has no tracks right now'
+	String get mixEmpty => 'This mix has no tracks right now';
+
 	/// en: 'No audio URL is available for ${track}'
 	String noAudioUrl({required Object track}) => 'No audio URL is available for ${track}';
 
@@ -9910,6 +9919,9 @@ extension on Translations {
 			'music.instantMixNoServer' => 'No server is available for radio',
 			'music.instantMixFailed' => 'Couldn\'t start the radio',
 			'music.instantMixEmpty' => 'The server has no radio for this',
+			'music.mixesForYou' => 'Mixes for you',
+			'music.mixFailed' => 'Couldn\'t start this mix',
+			'music.mixEmpty' => 'This mix has no tracks right now',
 			'music.noAudioUrl' => ({required Object track}) => 'No audio URL is available for ${track}',
 			'music.discography.singlesAndEps' => 'Singles & EPs',
 			'music.discography.live' => 'Live',
@@ -10323,11 +10335,11 @@ extension on Translations {
 			'performanceOverlay.tunneling' => 'Tunneling',
 			'performanceOverlay.passthrough' => 'Passthrough',
 			'performanceOverlay.aspect' => 'Aspect',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.rotation' => 'Rotation',
 			'performanceOverlay.dvSource' => 'DV Source',
 			'performanceOverlay.dvPath' => 'DV Path',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.dvRouteDecoder' => 'Dolby Vision decoder',
 			'performanceOverlay.dvRouteDecoderP81' => 'Dolby Vision decoder (P7→8.1)',
 			'performanceOverlay.dvRouteBaseLayer' => 'Base layer',

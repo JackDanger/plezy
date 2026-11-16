@@ -109,3 +109,81 @@ extension PlexLibraryMix on PlexClient {
     return spreadArtists(tracks, count: plexLibraryRadioTrackCount);
   }
 }
+
+/// How many tracks a mix for you queues, picked at random from all of its
+/// tracks. Plexamp plays these shuffled too.
+const plexMixTrackCount = 200;
+
+/// One of Plex's "Mixes for you": built by the server from listening history
+/// and sonic analysis around one artist, refreshed every few hours. It has no
+/// id of its own; it is a library filter over a set of artists and albums.
+class PlexMixForYou {
+  final String title;
+
+  /// The library filter (`/library/sections/{id}/all?artist.id=…&or=1&album.id=…`).
+  final String key;
+
+  /// The artist the mix is centred on, for artwork.
+  final String? artistTitle;
+  final String? thumb;
+  final int? librarySectionID;
+
+  const PlexMixForYou({required this.title, required this.key, this.artistTitle, this.thumb, this.librarySectionID});
+
+  /// The hub item Plex sends, or null when it is not a mix.
+  static PlexMixForYou? fromHubItem(Map<String, dynamic> json) {
+    final title = json['title'];
+    final key = json['key'];
+    if (title is! String || title.isEmpty || key is! String || !key.startsWith('/library/sections/')) return null;
+    final children = json['Metadata'];
+    Map<String, dynamic>? centroid;
+    if (children is List) {
+      final maps = children.whereType<Map<String, dynamic>>();
+      centroid = maps.where((m) => m['centroid'] == true).firstOrNull ?? maps.firstOrNull;
+    }
+    final sectionId = json['librarySectionID'] ?? centroid?['librarySectionID'];
+    return PlexMixForYou(
+      title: title,
+      key: key,
+      artistTitle: centroid?['title'] as String?,
+      thumb: centroid?['thumb'] as String?,
+      librarySectionID: sectionId is int ? sectionId : int.tryParse('$sectionId'),
+    );
+  }
+}
+
+/// The hub that carries the mixes. Plex only sends it when asked with
+/// `includeMyMixes=1`, which is what Plexamp does.
+bool isPlexMixesHub(Map<String, dynamic> hub) {
+  final id = hub['hubIdentifier'];
+  return id is String && id.startsWith('music.mixes');
+}
+
+extension PlexMixesForYou on PlexClient {
+  /// Plex's mixes for the music library [libraryId], or none when the server
+  /// has none (it needs Plex Pass, sonic analysis and some listening history).
+  Future<List<PlexMixForYou>> fetchMixesForYou(String libraryId, {int count = 12}) async {
+    final response = await _getWithFailover(
+      '/hubs/sections/$libraryId',
+      queryParameters: {'includeMyMixes': 1, 'count': count},
+    );
+    final hubs = _getMediaContainer(response)?['Hub'];
+    if (hubs is! List) return const [];
+    final hub = hubs.whereType<Map<String, dynamic>>().where(isPlexMixesHub).firstOrNull;
+    final items = hub?['Metadata'];
+    if (items is! List) return const [];
+    return [for (final item in items.whereType<Map<String, dynamic>>()) ?PlexMixForYou.fromHubItem(item)];
+  }
+
+  /// [plexMixTrackCount] of [mix]'s tracks, in random order.
+  Future<List<MediaItem>> fetchMixTracks(PlexMixForYou mix) async {
+    final separator = mix.key.contains('?') ? '&' : '?';
+    final result = await _fetchPaginatedList(
+      '${mix.key}${separator}type=10&sort=random',
+      start: 0,
+      size: plexMixTrackCount,
+      librarySectionID: mix.librarySectionID,
+    );
+    return result.items.map(PlexMappers.mediaItem).toList();
+  }
+}
