@@ -94,6 +94,7 @@ class _PlaylistDetailScreenState extends BaseMediaListDetailScreen<PlaylistDetai
       shuffle: shuffle,
       startTrack: startTrack,
       preloadedItems: _isPlaylistFullyLoaded ? items : null,
+      loadedItems: items,
       onError: (e, stackTrace) =>
           showErrorSnackBar(context, localizedLoadErrorMessage(e, stackTrace, context: widget.playlist.title)),
     );

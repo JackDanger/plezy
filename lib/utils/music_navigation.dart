@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../media/library_query.dart';
 import '../media/media_item.dart';
 import '../media/media_playlist.dart';
 import '../media/media_server_client.dart';
@@ -170,11 +173,29 @@ Future<void> playFetchedTracks(
   await playTracks(context, tracks: tracks, startTrack: startTrack, playContext: playContext, shuffle: shuffle);
 }
 
-/// Play an audio [playlist] through the music session: hand its tracks to
-/// [playFetchedTracks] under a playlist play-context. Callers that already
-/// hold the full track list pass it as [preloadedItems] to skip the server
-/// round-trip; [onError] and [onEmpty] carry each caller's own snackbar
-/// strings. Shared by the playlist detail screen and the media context menu.
+/// A playlist longer than this plays from a window of it instead of being
+/// fetched whole first: Plex's built-in smart playlists ("Recently Added",
+/// "All Music") run to tens or hundreds of thousands of tracks, and paging
+/// through all of them before the first note left a tap looking dead.
+const int largePlaylistThreshold = 1000;
+
+/// How many tracks past the starting one a large playlist queues.
+const int largePlaylistQueueLength = 1000;
+
+/// Random pages a large playlist's shuffle draws from.
+const int _shufflePageCount = 5;
+const int _shufflePageSize = 100;
+
+/// Play an audio [playlist] through the music session under a playlist
+/// play-context. Callers that already hold the full track list pass it as
+/// [preloadedItems] to skip the server round-trip; [onError] and [onEmpty]
+/// carry each caller's own snackbar strings. Shared by the playlist detail
+/// screen and the media context menu.
+///
+/// A playlist over [largePlaylistThreshold] tracks starts at once from
+/// [loadedItems] (what the screen has paged in so far, or the first page),
+/// and the rest of a [largePlaylistQueueLength]-track window is added to the
+/// queue while it plays. Shuffling one draws from random pages across it.
 Future<void> playAudioPlaylist(
   BuildContext context, {
   required MediaServerClient client,
@@ -182,18 +203,116 @@ Future<void> playAudioPlaylist(
   bool shuffle = false,
   MediaItem? startTrack,
   List<MediaItem>? preloadedItems,
+  List<MediaItem>? loadedItems,
   void Function(Object error, StackTrace stackTrace)? onError,
   VoidCallback? onEmpty,
-}) {
-  return playFetchedTracks(
+  Random? random,
+}) async {
+  final playContext = MusicPlayContext(title: playlist.title, kind: MusicPlayContextKind.playlist);
+  final total = playlist.leafCount;
+  if (preloadedItems != null || total == null || total <= largePlaylistThreshold) {
+    return playFetchedTracks(
+      context,
+      fetch: () async => preloadedItems ?? await fetchAllPlaylistItems(client, playlist.id),
+      playContext: playContext,
+      onError: onError,
+      onEmpty: onEmpty,
+      startTrack: startTrack,
+      shuffle: shuffle,
+    );
+  }
+
+  if (shuffle) {
+    return playFetchedTracks(
+      context,
+      fetch: () => _randomPlaylistSample(client, playlist.id, total, random ?? Random()),
+      playContext: playContext,
+      onError: onError,
+      onEmpty: onEmpty,
+      startTrack: startTrack,
+      shuffle: true,
+    );
+  }
+
+  final service = context.read<MusicPlaybackService>();
+  var fetchedThrough = 0;
+  var startIndex = 0;
+  await playFetchedTracks(
     context,
-    fetch: () async => preloadedItems ?? await fetchAllPlaylistItems(client, playlist.id),
-    playContext: MusicPlayContext(title: playlist.title, kind: MusicPlayContextKind.playlist),
+    fetch: () async {
+      final initial = loadedItems != null && loadedItems.isNotEmpty
+          ? List<MediaItem>.of(loadedItems)
+          : (await client.fetchPlaylistPage(playlist.id, start: 0, size: playlistItemsPageSize)).items;
+      fetchedThrough = initial.length;
+      if (startTrack != null) startIndex = initial.indexWhere((t) => t.id == startTrack.id).clamp(0, initial.length);
+      return initial;
+    },
+    playContext: playContext,
     onError: onError,
     onEmpty: onEmpty,
     startTrack: startTrack,
-    shuffle: shuffle,
   );
+  if (fetchedThrough == 0 || !identical(service.playContext, playContext)) return;
+  await _extendPlaylistQueue(
+    service,
+    client: client,
+    playlistId: playlist.id,
+    playContext: playContext,
+    from: fetchedThrough,
+    until: (startIndex + 1 + largePlaylistQueueLength).clamp(0, total),
+  );
+}
+
+/// Page the rest of a large playlist's window onto the queue, stopping as soon
+/// as anything else takes over the session.
+Future<void> _extendPlaylistQueue(
+  MusicPlaybackService service, {
+  required MediaServerClient client,
+  required String playlistId,
+  required MusicPlayContext playContext,
+  required int from,
+  required int until,
+}) async {
+  final revision = service.queueSessionRevision;
+  bool stillOurs() => service.queueSessionRevision == revision && identical(service.playContext, playContext);
+  var start = from;
+  while (start < until && stillOurs()) {
+    final LibraryPage<MediaItem> page;
+    try {
+      page = await client.fetchPlaylistPage(
+        playlistId,
+        start: start,
+        size: (until - start).clamp(1, playlistItemsPageSize),
+      );
+    } catch (e, st) {
+      appLogger.w('Could not add more of playlist $playlistId to the queue', error: e, stackTrace: st);
+      return;
+    }
+    if (page.items.isEmpty || !stillOurs()) return;
+    service.addToEnd(page.items);
+    start += page.items.length;
+  }
+}
+
+/// A few random pages from across a playlist too long to fetch whole, without
+/// duplicates.
+Future<List<MediaItem>> _randomPlaylistSample(
+  MediaServerClient client,
+  String playlistId,
+  int total,
+  Random random,
+) async {
+  final lastStart = (total - _shufflePageSize).clamp(0, total);
+  final starts = {for (var i = 0; i < _shufflePageCount; i++) random.nextInt(lastStart + 1)};
+  final pages = await Future.wait(
+    starts.map((start) => client.fetchPlaylistPage(playlistId, start: start, size: _shufflePageSize)),
+  );
+  final seen = <String>{};
+  return [
+    for (final page in pages)
+      for (final item in page.items)
+        if (seen.add(item.id)) item,
+  ];
 }
 
 /// Play [track] within its album queue: fetch the album's tracks and start
