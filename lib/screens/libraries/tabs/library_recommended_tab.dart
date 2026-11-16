@@ -9,10 +9,12 @@ import '../../../focus/locked_hub_controller.dart';
 import '../../../i18n/strings.g.dart';
 import '../../../media/media_hub.dart';
 import '../../../media/media_item.dart';
+import '../../../media/media_kind.dart';
 import '../../../media/media_server_client.dart';
 import '../../../mixins/deletion_aware.dart';
 import '../../../mixins/item_updatable.dart';
 import '../../../mixins/watch_state_aware.dart';
+import '../../../services/plex_client.dart';
 import '../../../services/settings_service.dart';
 import '../../../utils/deletion_notifier.dart';
 import '../../../utils/hub_icons.dart';
@@ -27,6 +29,7 @@ import '../../../widgets/tv_browse_rail.dart';
 import '../../../widgets/tv_spotlight_scaffold.dart';
 import '../../main_screen.dart';
 import 'base_library_tab.dart';
+import 'plex_mixes_row.dart';
 
 /// Recommended tab for library screen
 /// Shows library-specific hubs and recommendations, including dedicated Continue Watching
@@ -187,7 +190,18 @@ class _LibraryRecommendedTabState extends BaseLibraryTabState<MediaHub, LibraryR
   @override
   Future<void> loadItems() => runLoadTransaction(_loadRecommendedHubs);
 
+  /// Bumped on every load so the mixes row reloads with the hubs.
+  int _loadGeneration = 0;
+
+  /// Plex music libraries get Plex's "Mixes for you" above the hubs.
+  PlexClient? get _mixesClient {
+    if (widget.library.kind != MediaKind.artist) return null;
+    final client = context.tryGetMediaClientForServer(serverIdOrNull(widget.library.serverId));
+    return client is PlexClient ? client : null;
+  }
+
   Future<List<MediaHub>> _loadRecommendedHubs() async {
+    _loadGeneration++;
     // Backend-aware fetch: Plex hits /hubs/sections, Jellyfin synthesises
     // Continue Watching + Next Up + Recently Added.
     final client = context.tryGetMediaClientForServer(serverIdOrNull(widget.library.serverId));
@@ -289,6 +303,17 @@ class _LibraryRecommendedTabState extends BaseLibraryTabState<MediaHub, LibraryR
         clipBehavior: Clip.none,
         slivers: [
           SliverOverlapInjector(handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context)),
+          if (_mixesClient case final client?)
+            SliverPadding(
+              padding: const EdgeInsets.only(top: _focusDecorationPadding),
+              sliver: SliverToBoxAdapter(
+                child: PlexMixesRow(
+                  key: ValueKey('mixes-${widget.library.id}-$_loadGeneration'),
+                  client: client,
+                  libraryId: widget.library.id,
+                ),
+              ),
+            ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(0, _focusDecorationPadding, 0, 8),
             sliver: SliverList.builder(

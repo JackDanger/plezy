@@ -618,6 +618,110 @@ void main() {
     });
   });
 
+  group('mixes for you', () {
+    http.Response container(Map<String, dynamic> body) =>
+        http.Response(jsonEncode({'MediaContainer': body}), 200, headers: {'content-type': 'application/json'});
+
+    // The shape PMS 1.43 sends for /hubs/sections/{id}?includeMyMixes=1.
+    Map<String, dynamic> hubs() => {
+      'Hub': [
+        {
+          'hubIdentifier': 'music.recent.played.3',
+          'type': 'artist',
+          'Metadata': [
+            {'ratingKey': 'a1', 'type': 'artist', 'title': 'Someone'},
+          ],
+        },
+        {
+          'hubIdentifier': 'music.mixes.3',
+          'type': 'playlist',
+          'context': 'hub.music.mixes',
+          'title': 'Mixes For You',
+          'Metadata': [
+            {
+              'guid': '',
+              'type': 'playlist',
+              'title': 'Artist One Mix',
+              'smart': true,
+              'leafCount': 0,
+              'key': '/library/sections/3/all?artist.id=11,12&or=1&album.id=21,22',
+              'Metadata': [
+                {'ratingKey': '10', 'type': 'artist', 'title': 'Not Centre', 'thumb': '/t/10'},
+                {
+                  'centroid': true,
+                  'ratingKey': '11',
+                  'type': 'artist',
+                  'title': 'Artist One',
+                  'thumb': '/library/metadata/11/thumb/1',
+                  'librarySectionID': 3,
+                },
+              ],
+            },
+            {'type': 'playlist', 'title': 'Not a mix', 'key': '/playlists/5/items'},
+          ],
+        },
+      ],
+    };
+
+    test('asks for the mixes hub and reads each mix from it', () async {
+      Uri? asked;
+      final client = makeClient((request) async {
+        asked = request.url;
+        return container(hubs());
+      });
+      addTearDown(client.close);
+
+      final mixes = await client.fetchMixesForYou('3');
+
+      expect(asked?.path, '/hubs/sections/3');
+      expect(asked?.queryParameters['includeMyMixes'], '1');
+      expect(mixes, hasLength(1));
+      expect(mixes.single.title, 'Artist One Mix');
+      expect(mixes.single.artistTitle, 'Artist One');
+      expect(mixes.single.thumb, '/library/metadata/11/thumb/1');
+      expect(mixes.single.librarySectionID, 3);
+    });
+
+    test('no mixes hub means no mixes', () async {
+      final client = makeClient((request) async => container({'Hub': []}));
+      addTearDown(client.close);
+
+      expect(await client.fetchMixesForYou('3'), isEmpty);
+    });
+
+    test("a mix's tracks are its filter, as tracks, in random order", () async {
+      Uri? asked;
+      final client = makeClient((request) async {
+        asked = request.url;
+        return container({
+          'size': 2,
+          'totalSize': 111,
+          'Metadata': [
+            {'ratingKey': 't1', 'type': 'track', 'title': 'One'},
+            {'ratingKey': 't2', 'type': 'track', 'title': 'Two'},
+          ],
+        });
+      });
+      addTearDown(client.close);
+
+      const mix = PlexMixForYou(
+        title: 'Artist One Mix',
+        key: '/library/sections/3/all?artist.id=11,12&or=1&album.id=21,22',
+        librarySectionID: 3,
+      );
+      final tracks = await client.fetchMixTracks(mix);
+
+      expect(tracks.map((t) => t.id), ['t1', 't2']);
+      expect(asked?.path, '/library/sections/3/all');
+      expect(asked?.queryParameters, containsPair('artist.id', '11,12'));
+      expect(asked?.queryParameters, containsPair('album.id', '21,22'));
+      expect(asked?.queryParameters, containsPair('or', '1'));
+      expect(asked?.queryParameters, containsPair('type', '10'));
+      expect(asked?.queryParameters, containsPair('sort', 'random'));
+      expect(asked?.queryParameters['X-Plex-Container-Size'] ?? asked?.queryParameters['limit'], '$plexMixTrackCount');
+    });
+  });
+
   group('show play queue', () {
     setUp(() async {
       resetSharedPreferencesForTest();

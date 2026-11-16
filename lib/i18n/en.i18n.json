@@ -1797,6 +1797,9 @@
     "instantMixNoServer": "No server is available for radio",
     "instantMixFailed": "Couldn't start the radio",
     "instantMixEmpty": "The server has no radio for this",
+    "mixesForYou": "Mixes for you",
+    "mixFailed": "Couldn't start this mix",
+    "mixEmpty": "This mix has no tracks right now",
     "noAudioUrl": "No audio URL is available for ${track}",
     "discography": {
       "singlesAndEps": "Singles & EPs",

@@ -4395,6 +4395,15 @@ class Translations$music$en {
 	/// en: 'The server has no radio for this'
 	String get instantMixEmpty => 'The server has no radio for this';
 
+	/// en: 'Mixes for you'
+	String get mixesForYou => 'Mixes for you';
+
+	/// en: 'Couldn't start this mix'
+	String get mixFailed => 'Couldn\'t start this mix';
+
+	/// en: 'This mix has no tracks right now'
+	String get mixEmpty => 'This mix has no tracks right now';
+
 	/// en: 'No audio URL is available for ${track}'
 	String noAudioUrl({required Object track}) => 'No audio URL is available for ${track}';
 
@@ -9748,6 +9757,9 @@ extension on Translations {
 			'music.instantMixNoServer' => 'No server is available for radio',
 			'music.instantMixFailed' => 'Couldn\'t start the radio',
 			'music.instantMixEmpty' => 'The server has no radio for this',
+			'music.mixesForYou' => 'Mixes for you',
+			'music.mixFailed' => 'Couldn\'t start this mix',
+			'music.mixEmpty' => 'This mix has no tracks right now',
 			'music.noAudioUrl' => ({required Object track}) => 'No audio URL is available for ${track}',
 			'music.discography.singlesAndEps' => 'Singles & EPs',
 			'music.discography.live' => 'Live',
@@ -10170,11 +10182,11 @@ extension on Translations {
 			'performanceOverlay.maxFall' => 'MaxFALL',
 			'performanceOverlay.cacheUsed' => 'Cache Used',
 			'performanceOverlay.cacheLimit' => 'Cache Limit',
+			_ => null,
+		} ?? switch (path) {
 			'performanceOverlay.speed' => 'Speed',
 			'performanceOverlay.player' => 'Player',
 			'performanceOverlay.playMethod' => 'Play Method',
-			_ => null,
-		} ?? switch (path) {
 			'performanceOverlay.memory' => 'Memory',
 			'performanceOverlay.uiFps' => 'UI FPS',
 			'performanceOverlay.fps' => 'FPS',
