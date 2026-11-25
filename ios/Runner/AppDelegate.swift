@@ -73,6 +73,11 @@ import MediaPlayer
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DeepLinkPlugin") {
       DeepLinkPlugin.register(with: registrar)
     }
+
+    // The car's screens ask Dart what to list and play (CarPlaySceneDelegate).
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "CarPlayController") {
+      CarPlayController.shared.attach(messenger: registrar.messenger())
+    }
   }
 
   private func registerDeviceAdjustmentChannel(messenger: FlutterBinaryMessenger) {

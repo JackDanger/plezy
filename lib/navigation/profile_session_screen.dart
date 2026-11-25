@@ -40,6 +40,7 @@ import '../watch_together/providers/watch_together_provider.dart';
 import '../watch_together/watch_together.dart' show WatchNoticeListener;
 import '../widgets/music/mini_player.dart';
 import '../widgets/agent_control_scope.dart';
+import '../widgets/carplay_bridge_host.dart';
 import 'profile_navigation_scope.dart';
 import 'settings_shortcut.dart';
 
@@ -297,12 +298,14 @@ class _ProfileSessionScreenState extends State<ProfileSessionScreen> {
                 },
               ),
             ],
-            child: WatchNoticeListener(
-              child: CoveredRouteFocusBoundary(
-                child: _ProfileSessionNavigator(
-                  isOfflineMode: widget.isOfflineMode,
-                  initialPromptHandled: initialPromptHandled,
-                  profileShellBuilder: widget.profileShellBuilder,
+            child: CarPlayBridgeHost(
+              child: WatchNoticeListener(
+                child: CoveredRouteFocusBoundary(
+                  child: _ProfileSessionNavigator(
+                    isOfflineMode: widget.isOfflineMode,
+                    initialPromptHandled: initialPromptHandled,
+                    profileShellBuilder: widget.profileShellBuilder,
+                  ),
                 ),
               ),
             ),
