@@ -451,6 +451,12 @@ class PlexWatchClient {
   /// Pick a base URL that works for AVPlayer media streaming (probe LAN + plex.direct).
   func streamingBase() async -> String {
     if let cached = freshStreamingBase() { return cached }
+    // A remote address already chosen for the API means the LAN did not
+    // answer, so its plain-HTTP variant will not either: no second probe.
+    if let api = freshApiBase(), !Self.isPrivateAddress(api) {
+      setStreamingBase(api)
+      return api
+    }
     if let base = await firstAnsweringOrDiscover(streamBaseCandidates) {
       WatchInstrument.plex("streamingBase: using \(base)")
       setStreamingBase(base)
@@ -512,23 +518,45 @@ class PlexWatchClient {
     return await firstAnswering(discovered)
   }
 
+  /// How long a preferred address may keep a less preferred one that has
+  /// already answered waiting. At home the LAN answers in tens of
+  /// milliseconds; away, a LAN address does not fail, it times out.
+  static let preferenceGrace: TimeInterval = 1.5
+
   /// The first of [candidates], in order of preference, that answers.
   ///
   /// All are asked at once. Asked one by one, each address that went
-  /// nowhere cost the whole timeout before the next was tried.
+  /// nowhere cost the whole timeout before the next was tried. A preferred
+  /// address gets [preferenceGrace] to answer; after that the best one
+  /// that has answered is used rather than waiting out its timeout.
   private func firstAnswering(_ candidates: [String]) async -> String? {
     guard !candidates.isEmpty else { return nil }
+    let grace = UInt64(Self.preferenceGrace * 1_000_000_000)
     return await withTaskGroup(of: (Int, Bool).self) { group in
       for (index, base) in candidates.enumerated() {
         group.addTask { (index, await self.probeStreamingBase(base)) }
       }
+      // Index -1: the grace period is over.
+      group.addTask {
+        try? await Task.sleep(nanoseconds: grace)
+        return (-1, false)
+      }
       var answered = [Bool?](repeating: nil, count: candidates.count)
+      var graceOver = false
       for await (index, ok) in group {
-        answered[index] = ok
-        if !ok { WatchInstrument.plex("unreachable \(candidates[index])") }
+        if index < 0 {
+          graceOver = true
+        } else {
+          answered[index] = ok
+          if !ok { WatchInstrument.plex("unreachable \(candidates[index])") }
+        }
         // Settled once everything preferred over the best answer so
-        // far has failed.
+        // far has failed, or has had its chance.
         if let best = answered.firstIndex(where: { $0 != false }), answered[best] == true {
+          group.cancelAll()
+          return candidates[best]
+        }
+        if graceOver, let best = answered.firstIndex(where: { $0 == true }) {
           group.cancelAll()
           return candidates[best]
         }

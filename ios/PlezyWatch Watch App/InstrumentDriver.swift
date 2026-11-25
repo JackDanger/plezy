@@ -26,7 +26,42 @@
       WatchInstrument.log(.lifecycle, "InstrumentDriver START credentialed=\(PlexWatchClient.shared.hasCredentials)")
 
       if let server = environment["PLEZY_DRIVE_SERVER"], let token = environment["PLEZY_DRIVE_TOKEN"] {
-        PlexWatchClient.shared.saveCredentials(serverUrl: server, token: token, isManual: true)
+        // PLEZY_DRIVE_MACHINE_ID and PLEZY_DRIVE_FALLBACKS (comma-separated)
+        // stand in for what the phone hands over, so an unreachable LAN
+        // server address plays the watch out on cellular.
+        let fallbacks = environment["PLEZY_DRIVE_FALLBACKS"]?.split(separator: ",").map(String.init)
+        PlexWatchClient.shared.saveCredentials(
+          serverUrl: server,
+          token: token,
+          machineIdentifier: environment["PLEZY_DRIVE_MACHINE_ID"],
+          fallbackUrls: fallbacks,
+          isManual: true
+        )
+      }
+      if let playlist = environment["PLEZY_DRIVE_PLAYLIST"] {
+        let started = Date()
+        let error = await MusicPlaybackCoordinator.shared.playPlaylist(
+          MusicItem(ratingKey: playlist, title: "Drive playlist", type: "playlist"),
+          shuffle: environment["PLEZY_DRIVE_SHUFFLE"] == "1",
+          connectivity: connectivity
+        )
+        WatchInstrument.log(
+          .lifecycle,
+          "InstrumentDriver playlist result: \(error ?? "OK") after \(Int(Date().timeIntervalSince(started) * 1000))ms")
+        // PLEZY_DRIVE_TRACK_ENDS=n jumps near the end of n tracks in a row,
+        // to watch one track hand over to the next.
+        for end in 0..<(Int(environment["PLEZY_DRIVE_TRACK_ENDS"] ?? "") ?? 0) {
+          await pause(3_000, label: "before end \(end + 1)")
+          let player = WatchAudioPlayer.shared
+          let title = player.currentItem?.title
+          await player.debugJumpNearEnd(secondsLeft: 28)
+          WatchInstrument.log(.lifecycle, "InstrumentDriver jumped to the last 28s of '\(title ?? "?")'")
+          let deadline = Date().addingTimeInterval(45)
+          while player.currentItem?.title == title, Date() < deadline { try? await Task.sleep(nanoseconds: 250_000_000) }
+          while player.isLoading, Date() < deadline { try? await Task.sleep(nanoseconds: 50_000_000) }
+          WatchInstrument.log(.lifecycle, "InstrumentDriver now playing '\(player.currentItem?.title ?? "?")'")
+        }
+        return
       }
       if let album = environment["PLEZY_DRIVE_ALBUM"] {
         let item = MusicItem(ratingKey: album, title: "Drive album", type: "album")
