@@ -34,7 +34,9 @@ enum RepeatMode: Int, CaseIterable {
 class WatchAudioPlayer: NSObject, ObservableObject {
   static let shared = WatchAudioPlayer()
 
-  private var player: AVPlayer?
+  /// A queue player so the next track can be loading while this one
+  /// plays; it never holds more than the current item and that one.
+  private var player: AVQueuePlayer?
   private var playerItem: AVPlayerItem?
   private var timeObserver: Any?
   private var cancellables = Set<AnyCancellable>()
@@ -63,6 +65,17 @@ class WatchAudioPlayer: NSObject, ObservableObject {
   /// The order to go back to when shuffle is turned off.
   private var unshuffledCatalog: [MusicItem]?
   private var isAdvancing = false
+  /// Resolving the track after the current one while it plays, so the
+  /// round trips are not taken between tracks.
+  private var resolveAheadTask: Task<Void, Never>?
+  private var resolveAheadToken = 0
+  /// The next track, handed to the player before this one ends so it is
+  /// already buffered when it starts.
+  private var preloaded: (index: Int, item: AVPlayerItem)?
+
+  /// How long before the end of a track the next one is handed to the
+  /// player: enough to start a transcode and fill a buffer on cellular.
+  private static let preloadLead: Double = 25
 
   // Play queue reference for fetching more tracks from Plex
   private var playQueueRef: PlayQueueReference?
@@ -231,9 +244,27 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     DispatchQueue.main.async { [weak self] in
       // Only handle if it's the current player item (not a discarded one)
       guard let self, finishedItem === self.playerItem else { return }
-      if let item = self.currentItem, self.wasCutOff(item) {
-        Task { @MainActor in await self.resumeCutOff(item) }
+      // The finished item's own clock: with a track preloaded, the player
+      // has already moved on to it.
+      let reached = finishedItem.currentTime().seconds + self.streamOffset
+      if let item = self.currentItem, self.wasCutOff(item, reached: reached) {
+        // Not over, so not the next track's turn yet.
+        if self.preloaded != nil {
+          self.player?.pause()
+          self.discardPreloaded()
+        }
+        Task { @MainActor in await self.resumeCutOff(item, reached: reached) }
         return
+      }
+      if let next = self.preloaded, let player = self.player {
+        // The end is announced before the player moves on, sometimes.
+        if self.repeatMode != .one, player.items().contains(where: { $0 === next.item }) {
+          if player.currentItem !== next.item { player.advanceToNextItem() }
+          player.play()
+          self.adoptPreloaded(next)
+          return
+        }
+        self.discardPreloaded()
       }
       if self.repeatMode == .one {
         self.seek(to: 0)
@@ -252,17 +283,15 @@ class WatchAudioPlayer: NSObject, ObservableObject {
   /// between Wi-Fi and cellular mid-run — AVPlayer plays out its buffer and
   /// reports the item finished, exactly as if the track had ended. Taking it
   /// at its word skipped to the next track partway through this one.
-  private func wasCutOff(_ item: QueueItem) -> Bool {
-    guard item.duration > 0, let player else { return false }
-    let reached = player.currentTime().seconds + streamOffset
+  private func wasCutOff(_ item: QueueItem, reached: Double) -> Bool {
+    guard item.duration > 0 else { return false }
     guard reached.isFinite else { return false }
     return item.duration - reached > Self.earlyEndTolerance
   }
 
   /// Open a fresh stream from where the cut-off one stopped.
   @MainActor
-  private func resumeCutOff(_ item: QueueItem) async {
-    let reached = (player?.currentTime().seconds ?? 0) + streamOffset
+  private func resumeCutOff(_ item: QueueItem, reached: Double) async {
     let count = resumes?.itemId == item.id ? resumes!.count + 1 : 1
     guard count <= Self.maxResumesPerTrack else {
       WatchInstrument.playback("Stream cut off again at \(Int(reached))s of \(Int(item.duration))s — moving on")
@@ -293,6 +322,19 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     isAdvancing = true
     defer { isAdvancing = false }
     let generation = queueGeneration
+    if let resolveAheadTask {
+      await resolveAheadTask.value
+      guard generation == queueGeneration else { return }
+    }
+
+    // Skipping to a track already loading: carry on with what has arrived.
+    if let next = preloaded, next.index == currentIndex + 1, let player,
+      player.items().contains(where: { $0 === next.item })
+    {
+      player.advanceToNextItem()
+      adoptPreloaded(next)
+      return
+    }
 
     if currentIndex < queue.count - 1 {
       currentIndex += 1
@@ -324,26 +366,125 @@ class WatchAudioPlayer: NSObject, ObservableObject {
   /// cannot be resolved rather than ending the album at the first one.
   @MainActor
   private func advanceFromCatalog(generation: Int) async {
+    guard await resolveNextFromCatalog(generation: generation) else {
+      guard generation == queueGeneration else { return }
+      isPlaying = false
+      error = "Could not load the next track"
+      updateNowPlayingInfo()
+      return
+    }
+    guard generation == queueGeneration else { return }
+    currentIndex = queue.count - 1
+    WatchInstrument.playback("Advanced catalog to \(catalogIndex + 1)/\(catalog.count)")
+    playCurrent()
+  }
+
+  /// Resolve the next catalog entry onto the end of [queue], passing over
+  /// up to three that cannot be resolved. Returns whether one was added.
+  @MainActor
+  private func resolveNextFromCatalog(generation: Int) async -> Bool {
     var attempts = 0
     while catalogIndex + 1 < catalog.count, attempts < 3 {
       attempts += 1
-      let next = catalog[catalogIndex + 1]
+      let at = catalogIndex
+      let next = catalog[at + 1]
       let item = await next.toQueueItem(client: PlexWatchClient.shared)
-      guard generation == queueGeneration else { return }
+      // Shuffling while this was out rebuilt the catalog under it.
+      guard generation == queueGeneration, catalogIndex == at, catalog.indices.contains(at + 1),
+        catalog[at + 1].ratingKey == next.ratingKey
+      else { return false }
       catalogIndex += 1
       guard let item else {
         WatchInstrument.playback("Could not resolve '\(next.title)', skipping")
         continue
       }
       queue.append(item)
-      currentIndex = queue.count - 1
-      WatchInstrument.playback("Advanced catalog to \(catalogIndex + 1)/\(catalog.count)")
-      playCurrent()
-      return
+      return true
     }
-    isPlaying = false
-    error = "Could not load the next track"
+    return false
+  }
+
+  /// While the current track plays, resolve the one after it, so that
+  /// reaching it costs no round trips.
+  @MainActor
+  private func resolveAhead() {
+    guard !Self.preloadDisabled, resolveAheadTask == nil, currentIndex + 1 >= queue.count, catalogIndex + 1 < catalog.count else { return }
+    let generation = queueGeneration
+    resolveAheadToken += 1
+    let token = resolveAheadToken
+    resolveAheadTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      if await self.resolveNextFromCatalog(generation: generation) {
+        WatchInstrument.playback("Resolved ahead to \(self.catalogIndex + 1)/\(self.catalog.count)")
+      }
+      if token == self.resolveAheadToken { self.resolveAheadTask = nil }
+    }
+  }
+
+  /// Hand the next track to the player once the current one is nearly over,
+  /// so it is buffered by the time this one ends. A live transcode does not
+  /// say how much of it has arrived, so a stream cut off short of its end
+  /// is caught when it ends instead (see [playerItemDidFinish]).
+  #if DEBUG
+    /// For measuring the gap without it: PLEZY_DRIVE_NO_PRELOAD=1.
+    private static let preloadDisabled = ProcessInfo.processInfo.environment["PLEZY_DRIVE_NO_PRELOAD"] == "1"
+  #else
+    private static let preloadDisabled = false
+  #endif
+
+  @MainActor
+  private func preloadNextIfDue() {
+    guard !Self.preloadDisabled else { return }
+    guard preloaded == nil, repeatMode != .one, !isLoading, let player, let playerItem,
+      player.currentItem === playerItem, currentIndex + 1 < queue.count,
+      let current = currentItem, current.duration > 0
+    else { return }
+    let remaining = current.duration - currentPosition
+    guard remaining > 0, remaining < Self.preloadLead else { return }
+
+    let index = currentIndex + 1
+    let next = queue[index]
+    guard let url = URL(string: next.streamUrl) else { return }
+    let headers = PlexWatchClient.shared.playbackHeaders(token: next.plexToken)
+    let item = AVPlayerItem(asset: AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers]))
+    guard player.canInsert(item, after: playerItem) else { return }
+    player.insert(item, after: playerItem)
+    preloaded = (index, item)
+    WatchInstrument.playback("Preloading '\(next.title)' with \(Int(remaining))s to go")
+  }
+
+  /// Take back a next track handed to the player early, because what plays
+  /// next has changed.
+  private func discardPreloaded() {
+    guard let preloaded else { return }
+    self.preloaded = nil
+    player?.remove(preloaded.item)
+  }
+
+  /// The player moved on to the preloaded track by itself: catch up with it.
+  @MainActor
+  private func adoptPreloaded(_ next: (index: Int, item: AVPlayerItem)) {
+    preloaded = nil
+    loadGeneration += 1
+    currentIndex = next.index
+    playerItem = next.item
+    streamOffset = 0
+    pendingSeek = nil
+    resumes = nil
+    currentPosition = 0
+    isLoading = true
+    error = nil
+    WatchInstrument.playback("Gapless into '\(currentItem?.title ?? "?")'")
+    observe(next.item)
     updateNowPlayingInfo()
+    if next.item.status == .readyToPlay {
+      handlePlayerItemStatus(.readyToPlay)
+    } else if next.item.status == .failed {
+      handlePlayerItemStatus(.failed)
+    }
+    if playQueueRef != nil && catalogIndex + 3 >= catalog.count {
+      Task { @MainActor in _ = await self.fetchMoreTracks() }
+    }
   }
 
   private func playCurrent() {
@@ -436,6 +577,7 @@ class WatchAudioPlayer: NSObject, ObservableObject {
   ) {
     queueGeneration += 1
     moreTracksTask = nil
+    resolveAheadTask = nil
     serverQueueExhausted = false
     retriedItemId = nil
     queue = items
@@ -469,6 +611,7 @@ class WatchAudioPlayer: NSObject, ObservableObject {
   {
     loadGeneration += 1
     let generation = loadGeneration
+    discardPreloaded()
     isLoading = true
     error = nil
     streamOffset = startsAt
@@ -519,11 +662,32 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
     let newItem = AVPlayerItem(asset: asset)
     playerItem = newItem
+    observe(newItem)
 
-    // Clear old subscriptions before adding new ones
+    if let player {
+      player.removeAllItems()
+      player.insert(newItem, after: nil)
+    } else {
+      let created = AVQueuePlayer(items: [newItem])
+      created.audiovisualBackgroundPlaybackPolicy = .continuesIfPossible
+      player = created
+    }
+
+    setupTimeObserver()
+    updateNowPlayingInfo()
+
+    // Check status immediately in case it's already ready (race condition fix)
+    if newItem.status == .readyToPlay {
+      handlePlayerItemStatus(.readyToPlay)
+    } else if newItem.status == .failed {
+      handlePlayerItemStatus(.failed)
+    }
+  }
+
+  /// Follow [newItem]'s status and stalls, and only its.
+  private func observe(_ newItem: AVPlayerItem) {
     cancellables.removeAll()
 
-    // Observe player item status
     newItem.publisher(for: \.status)
       .receive(on: DispatchQueue.main)
       .sink { [weak self] status in
@@ -543,23 +707,6 @@ class WatchAudioPlayer: NSObject, ObservableObject {
         }
       }
       .store(in: &cancellables)
-
-    if player == nil {
-      player = AVPlayer(playerItem: newItem)
-      player?.audiovisualBackgroundPlaybackPolicy = .continuesIfPossible
-    } else {
-      player?.replaceCurrentItem(with: newItem)
-    }
-
-    setupTimeObserver()
-    updateNowPlayingInfo()
-
-    // Check status immediately in case it's already ready (race condition fix)
-    if newItem.status == .readyToPlay {
-      handlePlayerItemStatus(.readyToPlay)
-    } else if newItem.status == .failed {
-      handlePlayerItemStatus(.failed)
-    }
   }
 
   private func handlePlayerItemStatus(_ status: AVPlayerItem.Status) {
@@ -582,6 +729,7 @@ class WatchAudioPlayer: NSObject, ObservableObject {
       if let item = currentItem {
         Task { @MainActor in
           MusicPlaybackCoordinator.shared.recordNowPlaying(item)
+          self.resolveAhead()
         }
       }
     case .failed:
@@ -636,6 +784,7 @@ class WatchAudioPlayer: NSObject, ObservableObject {
       guard let self else { return }
       self.currentPosition = time.seconds + self.streamOffset
       self.updateNowPlayingInfo()
+      MainActor.assumeIsolated { self.preloadNextIfDue() }
     }
   }
 
@@ -746,8 +895,10 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     queueGeneration += 1
     loadGeneration += 1
     moreTracksTask = nil
+    resolveAheadTask = nil
+    preloaded = nil
     player?.pause()
-    player?.replaceCurrentItem(with: nil)
+    player?.removeAllItems()
     playerItem = nil
     cancellables.removeAll()
     isPlaying = false
@@ -772,6 +923,7 @@ class WatchAudioPlayer: NSObject, ObservableObject {
   /// Toggle repeat mode (off -> one -> all -> off)
   func toggleRepeatMode() {
     repeatMode = repeatMode.next()
+    if repeatMode == .one { discardPreloaded() }
     WatchInstrument.playback("Repeat mode: \(repeatMode)")
   }
 
@@ -794,6 +946,8 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     let others = catalog.filter { $0.ratingKey != current.id }
     guard !others.isEmpty else { return }
 
+    discardPreloaded()
+    resolveAheadTask = nil
     unshuffledCatalog = catalog
     catalog = [entry] + others.shuffled()
     catalogIndex = 0
@@ -810,6 +964,8 @@ class WatchAudioPlayer: NSObject, ObservableObject {
       let original = unshuffledCatalog,
       let index = original.firstIndex(where: { $0.ratingKey == current.id })
     {
+      discardPreloaded()
+      resolveAheadTask = nil
       catalog = original
       catalogIndex = index
       queue = [current]
@@ -819,6 +975,20 @@ class WatchAudioPlayer: NSObject, ObservableObject {
     isShuffled = false
     WatchInstrument.playback("Queue unshuffled")
   }
+
+  #if DEBUG
+    /// Reopen the current track [secondsLeft] from its end, the way a
+    /// cut-off stream is resumed. For drives that watch a track end.
+    @MainActor
+    func debugJumpNearEnd(secondsLeft: Double) async {
+      guard let item = currentItem, item.duration > secondsLeft else { return }
+      let at = item.duration - secondsLeft
+      guard let stream = await PlexWatchClient.shared.resolveResumeStream(ratingKey: item.id, at: at),
+        currentItem?.id == item.id
+      else { return }
+      loadAndPlay(item, url: stream.url, startsAt: stream.startsAt, seekTo: stream.startsAt == 0 ? at : nil)
+    }
+  #endif
 
   /// Restart the queue from the beginning
   func restartQueue() {
