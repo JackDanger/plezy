@@ -1,5 +1,11 @@
+import 'dart:convert';
+
+import 'package:drift/native.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:plezy/database/app_database.dart';
+import 'package:plezy/media/ids.dart';
 import 'package:plezy/media/library_query.dart';
 import 'package:plezy/media/media_backend.dart';
 import 'package:plezy/media/media_item.dart';
@@ -7,11 +13,14 @@ import 'package:plezy/media/media_kind.dart';
 import 'package:plezy/media/media_library.dart';
 import 'package:plezy/media/media_playlist.dart';
 import 'package:plezy/media/media_server_client.dart';
+import 'package:plezy/media/server_capabilities.dart';
 import 'package:plezy/services/carplay_bridge.dart';
 import 'package:plezy/services/music/music_playback_service.dart';
 import 'package:plezy/services/playback_launch_observer.dart';
+import 'package:plezy/services/plex_api_cache.dart';
 import 'package:plezy/utils/media_server_http_client.dart' show AbortController;
 
+import '../test_helpers/backend_client_fixtures.dart';
 import '../test_helpers/media_items.dart';
 import '../test_helpers/paged_fakes.dart';
 import '../test_helpers/stub_music_playback_service.dart';
@@ -21,6 +30,42 @@ class _RecordingMusic extends StubMusicPlaybackService {
   MediaItem? startTrack;
   bool? shuffledStart;
   MusicPlayContext? context;
+  MediaItem? radioSeed;
+  int? jumpedTo;
+  List<MediaItem> playingQueue = const [];
+  int playingIndex = -1;
+  bool shuffleOn = false;
+  MusicRepeatMode repeat = MusicRepeatMode.off;
+
+  @override
+  List<MediaItem> get queue => playingQueue;
+
+  @override
+  int get currentIndex => playingIndex;
+
+  @override
+  MediaItem? get currentTrack => playingIndex < 0 ? null : playingQueue[playingIndex];
+
+  @override
+  bool get shuffled => shuffleOn;
+
+  @override
+  MusicRepeatMode get repeatMode => repeat;
+
+  @override
+  void setRepeatMode(MusicRepeatMode mode) {
+    repeat = mode;
+    notifyListeners();
+  }
+
+  @override
+  Future<InstantMixOutcome> playInstantMix(MediaItem seed) async {
+    radioSeed = seed;
+    return InstantMixOutcome.started;
+  }
+
+  @override
+  Future<void> jumpTo(int index) async => jumpedTo = index;
 
   @override
   Future<void> playFromList({
@@ -41,12 +86,28 @@ class _RecordingMusic extends StubMusicPlaybackService {
 }
 
 class _FakeClient implements MediaServerClient {
-  _FakeClient({this.playlistTracks = const [], this.albumTracks = const [], this.libraryItems = const []});
+  _FakeClient({
+    this.playlistTracks = const [],
+    this.albumTracks = const [],
+    this.libraryItems = const [],
+    this.instantMix = false,
+  });
 
   final List<MediaItem> playlistTracks;
   final List<MediaItem> albumTracks;
   final List<MediaItem> libraryItems;
+  final bool instantMix;
   LibraryQuery? lastQuery;
+
+  @override
+  ServerCapabilities get capabilities => ServerCapabilities(instantMix: instantMix);
+
+  @override
+  Future<MediaItem?> fetchItem(String id) async => libraryItems.where((i) => i.id == id).firstOrNull;
+
+  @override
+  Future<List<MediaItem>> fetchArtistAlbums(MediaItem artist) async =>
+      libraryItems.where((i) => i.kind == MediaKind.album).toList();
 
   @override
   Future<LibraryPage<MediaPlaylist>> fetchPlaylistsPage({
@@ -94,7 +155,11 @@ class _FakeClient implements MediaServerClient {
   }) async {
     expect(libraryId, '3', reason: 'only the music library is asked');
     lastQuery = query;
-    return fakeLibraryPage(libraryItems.where((i) => i.kind == query.kind).toList());
+    final items = libraryItems.where((i) => i.kind == query.kind).toList();
+    if (query.sort?.field == 'lastViewedAt') {
+      items.sort((a, b) => (b.lastViewedAt ?? 0).compareTo(a.lastViewedAt ?? 0));
+    }
+    return fakeLibraryPage(items.take(query.limit).toList());
   }
 
   @override
@@ -115,11 +180,15 @@ void main() {
   CarPlayBridge bridge(_FakeClient client, _RecordingMusic music) =>
       CarPlayBridge(clients: () => {'srv': client}, music: music, channel: const MethodChannel('carplay-test'));
 
-  List<Map<String, Object?>> rows(Map<String, Object?> reply) => (reply['items']! as List).cast<Map<String, Object?>>();
+  List<Map<String, Object?>> sections(Map<String, Object?> reply) =>
+      (reply['sections']! as List).cast<Map<String, Object?>>();
+  List<Map<String, Object?>> rows(Map<String, Object?> reply) => [
+    for (final section in sections(reply)) ...(section['items']! as List).cast<Map<String, Object?>>(),
+  ];
 
-  test('the tabs are playlists, artists and albums', () {
+  test('the tabs are mixes, playlists, artists and albums', () {
     final ids = bridge(_FakeClient(), _RecordingMusic()).tabs().map((t) => t['id']);
-    expect(ids, ['playlists', 'artists', 'albums']);
+    expect(ids, ['mixes', 'playlists', 'artists', 'albums']);
   });
 
   test('a playlist row opens a list with shuffle first, then its tracks', () async {
@@ -174,7 +243,7 @@ void main() {
     expect(client.lastQuery!.sort!.field, 'addedAt');
 
     final tracks = rows(await b.browse(albums.single['id']! as String));
-    expect(tracks.map((r) => r['title']), ['Track 0', 'Track 1']);
+    expect(tracks.map((r) => r['title']), ['Shuffle', 'Track 0', 'Track 1']);
     await b.play(tracks.last['id']! as String);
     expect(music.startTrack!.id, 'a1');
     expect(music.context!.kind, MusicPlayContextKind.album);
@@ -199,8 +268,244 @@ void main() {
     final music = _RecordingMusic();
     final b = bridge(client, music);
     final albumId = rows(await b.browse('albums')).single['id']! as String;
-    final track = rows(await b.browse(albumId)).single['id']! as String;
+    final track = rows(await b.browse(albumId)).last['id']! as String;
     await b.play(track);
     expect(music.context!.title, 'A|B');
+  });
+
+  test('with no server connected, a list says so', () async {
+    final b = CarPlayBridge(clients: () => {}, music: _RecordingMusic(), channel: const MethodChannel('carplay-test'));
+    final reply = await b.browse('mixes');
+    expect(sections(reply), isEmpty);
+    expect(reply['emptyTitle'], 'Plezy is not connected to a server');
+  });
+
+  group('the Mixes tab', () {
+    final played = testMediaItem(
+      id: 'al-played',
+      kind: MediaKind.album,
+      title: 'Blue',
+      serverId: 'srv',
+      lastViewedAt: 200,
+      thumbPath: '/blue',
+    );
+    final older = testMediaItem(
+      id: 'al-older',
+      kind: MediaKind.album,
+      title: 'Court',
+      serverId: 'srv',
+      lastViewedAt: 100,
+    );
+    final unplayed = testMediaItem(id: 'al-new', kind: MediaKind.album, title: 'Hejira', serverId: 'srv');
+    final artist = testMediaItem(id: 'ar1', kind: MediaKind.artist, title: 'Joni', serverId: 'srv', lastViewedAt: 300);
+
+    test('leads with covers of what was played last, which play from the top', () async {
+      final music = _RecordingMusic();
+      final b = bridge(_FakeClient(libraryItems: [unplayed, older, played], albumTracks: _tracks(3, 'a')), music);
+
+      final strip = sections(await b.browse('mixes')).first;
+      final row = (strip['items']! as List).single as Map<String, Object?>;
+      expect(row['type'], 'imageRow');
+      expect(row['title'], 'Recently Played');
+      final covers = (row['images']! as List).cast<Map<String, Object?>>();
+      expect(covers.map((c) => c['title']), ['Blue', 'Court'], reason: 'unplayed albums stay out');
+      expect(covers.first['image'], contains('/blue'));
+
+      expect(await b.play(covers.first['id']! as String), isNull);
+      expect(music.startTrack!.id, 'a0');
+      expect(music.context!.title, 'Blue');
+
+      final all = rows(await b.browse(row['id']! as String));
+      expect(all.map((r) => r['title']), ['Blue', 'Court']);
+      expect(all.every((r) => r['browsable'] == true), isTrue);
+    });
+
+    test('offers a radio station for artists played lately, where the server makes them', () async {
+      final music = _RecordingMusic();
+      final b = bridge(_FakeClient(libraryItems: [artist], instantMix: true), music);
+
+      final radio = sections(await b.browse('mixes')).singleWhere((s) => s['header'] == 'Radio');
+      final station = (radio['items']! as List).cast<Map<String, Object?>>().single;
+      expect(station['title'], 'Joni Radio');
+
+      expect(await b.play(station['id']! as String), isNull);
+      expect(music.radioSeed!.id, 'ar1');
+
+      final noRadio = bridge(_FakeClient(libraryItems: [artist]), _RecordingMusic());
+      expect(sections(await noRadio.browse('mixes')).where((s) => s['header'] == 'Radio'), isEmpty);
+    });
+
+    group('on Plex', () {
+      late AppDatabase db;
+      setUp(() {
+        db = AppDatabase.forTesting(NativeDatabase.memory());
+        PlexApiCache.initialize(db);
+      });
+      tearDown(() => db.close());
+
+      final requests = <Uri>[];
+      Map<String, Object?> container(Map<String, Object?> body) => {'MediaContainer': body};
+      Map<String, Object?> track(int i) => {
+        'ratingKey': 'mt$i',
+        'key': '/library/metadata/mt$i',
+        'type': 'track',
+        'title': 'Mix track $i',
+        'grandparentTitle': 'Joni',
+      };
+
+      Future<http.Response> plex(http.Request request) async {
+        requests.add(request.url);
+        final path = request.url.path;
+        final q = request.url.queryParameters;
+        final Map<String, Object?> body = switch (path) {
+          '/library/sections' => container({
+            'Directory': [
+              {'key': '3', 'type': 'artist', 'title': 'Music'},
+            ],
+          }),
+          '/hubs/sections/3' => container({
+            'Hub': [
+              {
+                'hubIdentifier': 'music.mixes.3',
+                'type': 'playlist',
+                'Metadata': [
+                  {
+                    'type': 'playlist',
+                    'title': 'Joni Mitchell Mix',
+                    'key': '/library/sections/3/all?artist.id=7',
+                    'Metadata': [
+                      {'title': 'Joni Mitchell', 'thumb': '/joni', 'centroid': true},
+                    ],
+                  },
+                ],
+              },
+            ],
+          }),
+          '/library/sections/3/all' when q.containsKey('artist.id') => container({
+            'size': 2,
+            'totalSize': 2,
+            'Metadata': [track(0), track(1)],
+          }),
+          _ => container({'size': 0, 'Metadata': <Object>[]}),
+        };
+        return http.Response(jsonEncode(body), 200, headers: {'content-type': 'application/json'});
+      }
+
+      test('lists Plex\'s mixes for you, and a tap plays the mix', () async {
+        final client = testPlexClient(serverId: ServerId('srv'), handler: plex);
+        addTearDown(client.close);
+        final music = _RecordingMusic();
+        final b = CarPlayBridge(
+          clients: () => {'srv': client},
+          music: music,
+          channel: const MethodChannel('carplay-test'),
+        );
+
+        final tab = sections(await b.browse('mixes'));
+        final mixes = (tab.singleWhere((s) => s['header'] == 'Mixes for You')['items']! as List)
+            .cast<Map<String, Object?>>();
+        expect(mixes.single['title'], 'Joni Mitchell Mix');
+        expect(mixes.single.containsKey('subtitle'), isFalse, reason: 'the title already names the artist');
+        expect(mixes.single['image'], contains('joni'));
+
+        final radio = (tab.singleWhere((s) => s['header'] == 'Radio')['items']! as List).cast<Map<String, Object?>>();
+        expect(radio.map((r) => r['title']).take(2), ['Library Radio', 'Shuffle Everything']);
+
+        requests.clear();
+        expect(await b.play(mixes.single['id']! as String), isNull);
+        expect(music.tracks!.map((t) => t.title), ['Mix track 0', 'Mix track 1']);
+        expect(music.context!.kind, MusicPlayContextKind.mix);
+        expect(music.context!.title, 'Joni Mitchell Mix');
+        expect(requests.single.queryParameters['artist.id'], '7');
+      });
+    });
+  });
+
+  test('an artist offers shuffle and radio above their albums', () async {
+    final artist = testMediaItem(id: 'ar1', kind: MediaKind.artist, title: 'Joni', serverId: 'srv');
+    final album = testMediaItem(id: 'al1', kind: MediaKind.album, title: 'Blue', serverId: 'srv');
+    final b = bridge(_FakeClient(libraryItems: [artist, album], instantMix: true), _RecordingMusic());
+    final artistId = rows(await b.browse('artists')).single['id']! as String;
+    expect(rows(await b.browse(artistId)).map((r) => r['title']), ['Shuffle', 'Joni Radio', 'Blue']);
+  });
+
+  group('Now Playing', () {
+    _RecordingMusic playing() => _RecordingMusic()
+      ..playingQueue = [
+        for (var i = 0; i < 4; i++)
+          testMediaItem(
+            id: 't$i',
+            kind: MediaKind.track,
+            title: 'Song $i',
+            serverId: 'srv',
+            grandparentId: 'ar1',
+            grandparentTitle: 'Joni',
+          ),
+      ]
+      ..playingIndex = 1;
+
+    test('Up Next lists the queue from the playing track, and a tap jumps there', () async {
+      final music = playing();
+      final b = bridge(_FakeClient(), music);
+      final upNext = rows(await b.browse('queue'));
+      expect(upNext.map((r) => r['title']), ['Song 1', 'Song 2', 'Song 3']);
+      expect(upNext.first['trackKey'], b.nowPlaying()['trackKey']);
+
+      expect(await b.play(upNext[2]['id']! as String), isNull);
+      expect(music.jumpedTo, 3);
+
+      music.playingQueue = music.playingQueue.reversed.toList();
+      expect(await b.play(upNext[2]['id']! as String), isNull, reason: 'found again after the queue moved');
+      expect(music.jumpedTo, 0);
+      music.playingQueue = const [];
+      expect(await b.play(upNext[2]['id']! as String), 'That track has left the queue');
+    });
+
+    test('reports shuffle, repeat, and whether radio and the artist button apply', () {
+      final music = playing()..shuffleOn = true;
+      final state = bridge(_FakeClient(instantMix: true), music).nowPlaying();
+      expect(state, {'trackKey': 'srv:t1', 'shuffled': true, 'repeat': 'off', 'radio': true, 'artist': true});
+      expect(bridge(_FakeClient(), _RecordingMusic()).nowPlaying()['trackKey'], isNull);
+    });
+
+    test('tells the car when the session changes, once per change', () async {
+      const channel = MethodChannel('carplay-notify-test');
+      final sent = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+        sent.add(call);
+        return null;
+      });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, null),
+      );
+      final music = playing();
+      final b = CarPlayBridge(clients: () => {'srv': _FakeClient()}, music: music, channel: channel)..start();
+      addTearDown(b.dispose);
+
+      music.setRepeatMode(MusicRepeatMode.all);
+      music.notifyListeners();
+      final states = sent.where((c) => c.method == 'nowPlaying').map((c) => (c.arguments as Map)['repeat']);
+      expect(states, ['off', 'all']);
+      expect(sent.first.method, 'ready');
+    });
+
+    test('the repeat button goes off, all, one, and around again', () {
+      expect(CarPlayBridge.nextRepeatMode(MusicRepeatMode.off), MusicRepeatMode.all);
+      expect(CarPlayBridge.nextRepeatMode(MusicRepeatMode.all), MusicRepeatMode.one);
+      expect(CarPlayBridge.nextRepeatMode(MusicRepeatMode.one), MusicRepeatMode.off);
+    });
+
+    test('the radio button starts a station from the playing song', () async {
+      final music = playing();
+      expect(await bridge(_FakeClient(instantMix: true), music).radioFromCurrent(), isNull);
+      expect(music.radioSeed!.id, 't1');
+      expect(await bridge(_FakeClient(), playing()).radioFromCurrent(), 'This server has no radio');
+    });
+
+    test('the artist button opens the playing song\'s artist', () {
+      final artist = bridge(_FakeClient(), playing()).currentArtist()!;
+      expect(artist['title'], 'Joni');
+      expect(artist['id'], startsWith('artist|srv|ar1'));
+    });
   });
 }
